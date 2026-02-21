@@ -9,8 +9,8 @@ import SwiftUI
 
 /// Displays a playbook's lifecycle phase as a small colored pill badge.
 ///
-/// Each phase (PROOF, STRUCTURE, REPEATABILITY, GROWTH) has a distinct color.
-/// The badge uses a tinted background with matching text and border.
+/// Each phase (PROOF, STRUCTURE, REPEATABILITY, GROWTH) has a distinct color
+/// defined on the `PlaybookPhase` enum.
 ///
 /// Usage:
 /// ```swift
@@ -18,28 +18,7 @@ import SwiftUI
 /// ```
 struct PhaseBadge: View {
 
-    /// The playbook lifecycle phases.
-    ///
-    /// Each phase maps to a distinct color from the design system.
-    /// This enum will be replaced by the domain model enum in Issue #5.
-    enum Phase: String, CaseIterable, Sendable {
-        case proof = "PROOF"
-        case structure = "STRUCTURE"
-        case repeatability = "REPEATABILITY"
-        case growth = "GROWTH"
-
-        /// The display color for this phase.
-        var color: Color {
-            switch self {
-            case .proof:         return Color.theme.phaseProof
-            case .structure:     return Color.theme.phaseStructure
-            case .repeatability: return Color.theme.phaseRepeatability
-            case .growth:        return Color.theme.phaseGrowth
-            }
-        }
-    }
-
-    let phase: Phase
+    let phase: PlaybookPhase
 
     var body: some View {
         Text(phase.rawValue)
@@ -60,7 +39,7 @@ struct PhaseBadge: View {
 
 #Preview("All Phases") {
     VStack(spacing: 12) {
-        ForEach(PhaseBadge.Phase.allCases, id: \.self) { phase in
+        ForEach(PlaybookPhase.allCases, id: \.self) { phase in
             PhaseBadge(phase: phase)
         }
     }
