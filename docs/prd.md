@@ -1,7 +1,7 @@
 # Idea Pilot — iOS PRD
 **Role:** Primary execution surface (fast, offline-tolerant, low-friction)
 
-> This document extends the [Platform PRD](_platform/prd.md), which defines the shared product vision, domain model, and execution framework. Read the Platform PRD first — this document covers iOS-specific concerns only.
+> This document extends the [Platform PRD](../platform/prd.md), which defines the shared product vision, domain model, and execution framework. Read the Platform PRD first — this document covers iOS-specific concerns only.
 
 ---
 
