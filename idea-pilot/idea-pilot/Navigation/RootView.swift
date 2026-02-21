@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+/// The root navigation view that determines which screen the user sees.
+///
+/// Currently displays a placeholder launch screen. Once auth is implemented (Issue #10),
+/// this view will act as the auth gate:
+/// - Authenticated → `MainTabView`
+/// - Unauthenticated → `AuthRootView`
+/// - Session expired → toast + redirect to auth
 struct RootView: View {
     var body: some View {
         ZStack {
