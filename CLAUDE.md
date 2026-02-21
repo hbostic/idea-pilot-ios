@@ -308,23 +308,99 @@ Do not:
 
 ### Close-Out Process
 
-When the user confirms testing is complete and asks to "close out" or "finish" a ticket, execute these steps in order:
+When the user confirms testing is complete and asks to "close out" or "finish" a ticket, execute **every** step below in order. Do not skip steps.
 
-1. **Verify PR target**: `gh pr view <number> --json baseRefName` — MUST be `dev`
-2. **Verify CI passed**: `gh pr checks <number>` — ALL checks must pass
-3. **Merge PR** (only after steps 1-2 pass)
-4. **Document on the issue**: Add a comment with PR link, summary of changes, and files modified
-5. **Move issue to "In Review"** and assign to the appropriate reviewer
-6. **Ask to delete the feature branch**
-7. **Production readiness check**: Review changes against known production readiness concerns:
-   - Hardcoded environment configuration
-   - Sensitive logging or credentials
-   - Input validation gaps
-   - Security misses
-   - Dead or divergent code
-   - Placeholder content
+**Trigger phrases:** "close out", "finish the ticket", "put it through the close out process"
 
-This process can be triggered by saying "close out", "finish the ticket", or "put it through the close out process".
+#### Step 1 — Verify PR target
+```bash
+gh pr view <PR_NUMBER> --json baseRefName --jq '.baseRefName'
+```
+Result MUST be `dev`. If it's `main`, STOP and alert the user.
+
+#### Step 2 — Verify CI passed
+```bash
+gh pr checks <PR_NUMBER>
+```
+ALL checks must show `pass`. If any are `pending` or `fail`, STOP and wait/report.
+
+#### Step 3 — Merge the PR
+```bash
+gh pr merge <PR_NUMBER> --merge
+```
+Only after steps 1-2 pass. Then pull `dev` locally:
+```bash
+git checkout dev && git pull
+```
+
+#### Step 4 — Document on the issue
+Add a structured comment to the GitHub issue:
+```bash
+gh issue comment <ISSUE_NUMBER> --body "## Completed via PR #<PR_NUMBER>
+
+### Summary of Changes
+- <bullet list of what changed>
+
+### Files Modified
+- <list key files added/modified/deleted>
+
+### CI
+Build & Test passed ✓"
+```
+
+#### Step 5 — Move issue on project board
+Move the issue to **"Done"** on the GitHub Projects board using GraphQL:
+
+```bash
+# 1. Find the item ID for the issue on the board
+ITEM_ID=$(gh project item-list 2 --owner hbostic --format json \
+  --jq '.items[] | select(.content.number == <ISSUE_NUMBER>) | .id')
+
+# 2. Move to "Done" status
+gh api graphql -f query='mutation {
+  updateProjectV2ItemFieldValue(input: {
+    projectId: "PVT_kwHOABhefM4BPxmU"
+    itemId: "'"$ITEM_ID"'"
+    fieldId: "PVTSSF_lAHOABhefM4BPxmUzg-FlX8"
+    value: { singleSelectOptionId: "4b89ce24" }
+  }) { projectV2Item { id } }
+}'
+```
+
+**Project Board Reference IDs:**
+
+| Resource | ID |
+|----------|-----|
+| Project | `PVT_kwHOABhefM4BPxmU` |
+| Status field | `PVTSSF_lAHOABhefM4BPxmUzg-FlX8` |
+| Todo | `9ca83425` |
+| In Progress | `d732bfa8` |
+| In Review | `e0ab8755` |
+| In QA | `a71b4e3e` |
+| Done | `4b89ce24` |
+
+#### Step 6 — Delete the feature branch
+```bash
+# Delete remote branch
+git push origin --delete <BRANCH_NAME>
+
+# Delete local branch
+git branch -d <BRANCH_NAME>
+```
+
+#### Step 7 — Production readiness check
+Review the merged changes against these concerns and report findings:
+
+| Check | What to look for |
+|-------|------------------|
+| Environment config | Hardcoded URLs, ports, or credentials (localhost, API keys) |
+| Sensitive logging | Tokens, passwords, PII in print/log statements |
+| Input validation | Unvalidated user input at system boundaries |
+| Security | Force unwraps on external data, insecure storage, missing auth checks |
+| Dead code | Unused imports, commented-out blocks, unreachable paths |
+| Placeholder content | TODO comments, Lorem ipsum, stub implementations shipped as real |
+
+Report: "Production readiness check passed ✓" or list specific concerns found.
 
 ### Release Process
 
