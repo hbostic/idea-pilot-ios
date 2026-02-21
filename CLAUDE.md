@@ -243,10 +243,10 @@ let playbooks = try await apiClient.request(
 
 ## Standards & Processes
 
-- **Environment setup** (Claude Code, GitHub CLI, IDE): See [docs/_shared/ENV_SETUP.md](docs/_shared/ENV_SETUP.md)
-- **Git workflow & PR process** (branching, commits, CI/CD, branch protection): See [docs/_shared/REPO_ETIQUETTE.md](docs/_shared/REPO_ETIQUETTE.md)
+- **Environment setup** (Claude Code, GitHub CLI, IDE): See [docs/_shared/env-setup.md](docs/_shared/env-setup.md)
+- **Git workflow & PR process** (branching, commits, CI/CD, branch protection): See [docs/_shared/repo-etiquette.md](docs/_shared/repo-etiquette.md)
 - **GitHub Issues workflow** (issue tracking, Projects board): See [docs/_shared/github-flow.md](docs/_shared/github-flow.md)
-- **Production readiness checks** (hardcoded URLs, secrets, large files): See [docs/_shared/REPO_ETIQUETTE.md#production-readiness-checks](docs/_shared/REPO_ETIQUETTE.md#production-readiness-checks)
+- **Production readiness checks** (hardcoded URLs, secrets, large files): See [docs/_shared/repo-etiquette.md#production-readiness-checks](docs/_shared/repo-etiquette.md#production-readiness-checks)
 
 ### Git Workflow (Quick Reference)
 
@@ -254,8 +254,8 @@ let playbooks = try await apiClient.request(
 2. Make changes, commit with descriptive messages
 3. **Write unit tests** for all new or modified logic — no PR without tests
 4. **Update documentation** — if behavior changes, update:
-   - **API docs** — update Swagger/OpenAPI annotations for new or modified endpoints
-   - **Function-level docs** — add JSDoc/TSDoc for all public functions, services, and exported utilities (params, return types, thrown errors)
+   - **API docs** — API spec is owned by the backend repo (`idea-pilot-api`); coordinate if endpoint contracts change
+   - **Function-level docs** — add Swift doc comments (`///`) for all public types, functions, and services (params, return types, thrown errors)
    - **Inline comments** — explain non-obvious logic, business rules, workarounds, and "why" decisions
 5. Create PR targeting `dev`: `gh pr create --base dev --title "#123 Description"`
 6. Wait for CI to pass (build, lint, tests, type check, production readiness)
@@ -271,8 +271,8 @@ let playbooks = try await apiClient.request(
 4. **NOW you may write code** on the feature branch
 5. **Write unit tests** before or alongside your implementation
 6. **Update documentation** if the change affects APIs, configs, or user-facing behavior:
-   - Swagger/OpenAPI specs for endpoint changes
-   - JSDoc/TSDoc for new or modified public functions
+   - Coordinate with backend repo if API endpoint contracts change
+   - Swift doc comments (`///`) for new or modified public types and functions
    - Inline comments for complex logic or business rules
 
 Do not:
@@ -336,6 +336,6 @@ After testing is complete on `dev`, a separate PR from `dev` to `main` is create
 - iOS UX Specification: [docs/ux.md](docs/ux.md)
 - Platform PRD: [docs/_platform/prd.md](docs/_platform/prd.md)
 - Architecture PRD: [docs/_platform/architecture-prd.md](docs/_platform/architecture-prd.md)
-- Environment setup: [docs/_shared/ENV_SETUP.md](docs/_shared/ENV_SETUP.md)
-- Repository standards: [docs/_shared/REPO_ETIQUETTE.md](docs/_shared/REPO_ETIQUETTE.md)
+- Environment setup: [docs/_shared/env-setup.md](docs/_shared/env-setup.md)
+- Repository standards: [docs/_shared/repo-etiquette.md](docs/_shared/repo-etiquette.md)
 - GitHub workflow: [docs/_shared/github-flow.md](docs/_shared/github-flow.md)
