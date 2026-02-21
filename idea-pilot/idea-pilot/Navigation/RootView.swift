@@ -17,22 +17,21 @@ import SwiftUI
 struct RootView: View {
     var body: some View {
         ZStack {
-            Color.black
+            Color.theme.background
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
                 Image(systemName: "airplane")
                     .font(.system(size: 64))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.theme.foreground)
 
                 Text("Idea Pilot")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .font(.theme.largeTitle)
+                    .foregroundStyle(Color.theme.foreground)
 
                 Text("Helping you land on the tarmac of execution")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.theme.subheadline)
+                    .foregroundStyle(Color.theme.mutedForeground)
             }
         }
     }
