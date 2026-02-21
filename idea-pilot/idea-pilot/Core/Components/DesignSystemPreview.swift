@@ -52,7 +52,7 @@ import SwiftUI
 
             sectionHeader("Phase Badges")
             HStack(spacing: 8) {
-                ForEach(PhaseBadge.Phase.allCases, id: \.self) { phase in
+                ForEach(PlaybookPhase.allCases, id: \.self) { phase in
                     PhaseBadge(phase: phase)
                 }
             }

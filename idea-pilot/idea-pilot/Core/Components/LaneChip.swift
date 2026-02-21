@@ -19,20 +19,11 @@ import SwiftUI
 /// ```
 struct LaneChipGroup: View {
 
-    /// The task lane options.
-    ///
-    /// This enum will be replaced by the domain model enum in Issue #5.
-    enum Lane: String, CaseIterable, Sendable {
-        case now = "NOW"
-        case next = "NEXT"
-        case later = "LATER"
-    }
-
-    @Binding var selected: Lane
+    @Binding var selected: TaskLane
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(Lane.allCases, id: \.self) { lane in
+            ForEach(TaskLane.allCases, id: \.self) { lane in
                 LaneChip(
                     lane: lane,
                     isSelected: selected == lane,
@@ -49,7 +40,7 @@ struct LaneChipGroup: View {
 /// When unselected: secondary/muted background, muted text, no border.
 struct LaneChip: View {
 
-    let lane: LaneChipGroup.Lane
+    let lane: TaskLane
     let isSelected: Bool
     let action: () -> Void
 
@@ -76,7 +67,7 @@ struct LaneChip: View {
 
 #Preview("Lane Chips") {
     struct PreviewWrapper: View {
-        @State private var lane: LaneChipGroup.Lane = .later
+        @State private var lane: TaskLane = .later
 
         var body: some View {
             VStack(spacing: 16) {

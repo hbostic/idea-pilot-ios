@@ -5,13 +5,16 @@
 //  Created by Harold Bostic on 2/21/26.
 //
 
+import SwiftData
 import SwiftUI
 
 /// The main entry point for the Idea Pilot iOS app.
 ///
-/// This struct bootstraps the app window and sets the root view.
+/// Bootstraps the app window, registers the SwiftData `ModelContainer`,
+/// and sets the root view. SwiftData discovers all related models
+/// (TaskModel, SectionModel, WeeklyCycleModel) via PlaybookModel's relationships.
+///
 /// Future milestones will add:
-/// - `ModelContainer` for SwiftData persistence (Issue #5)
 /// - Environment objects for auth state and sync engine
 /// - Deep link handling
 @main
@@ -20,5 +23,6 @@ struct idea_pilotApp: App {
         WindowGroup {
             RootView()
         }
+        .modelContainer(for: PlaybookModel.self)
     }
 }
