@@ -77,8 +77,12 @@ extension Endpoint {
 
 extension Endpoint {
 
-    static func getPlaybooks() -> Endpoint {
-        Endpoint(path: "/v1/playbooks", method: .get)
+    static func getPlaybooks(updatedSince: Date? = nil) -> Endpoint {
+        var queryItems: [URLQueryItem]?
+        if let date = updatedSince {
+            queryItems = [URLQueryItem(name: "updated_since", value: ISO8601DateFormatter().string(from: date))]
+        }
+        return Endpoint(path: "/v1/playbooks", method: .get, queryItems: queryItems)
     }
 
     static func getPlaybook(id: String) -> Endpoint {
@@ -95,6 +99,10 @@ extension Endpoint {
 
     static func deletePlaybook(id: String) -> Endpoint {
         Endpoint(path: "/v1/playbooks/\(id)", method: .delete)
+    }
+
+    static func archivePlaybook(id: String) -> Endpoint {
+        Endpoint(path: "/v1/playbooks/\(id)/archive", method: .post)
     }
 }
 
