@@ -91,6 +91,20 @@ final class AuthViewModel {
         clearErrors()
     }
 
+    /// Signs the user out, clearing tokens and local data.
+    ///
+    /// Best-effort logout API call, then resets `isAuthenticated` to `false`.
+    func signOut() {
+        Task {
+            try? await authService.logout()
+            isAuthenticated = false
+            email = ""
+            password = ""
+            confirmPassword = ""
+            clearErrors()
+        }
+    }
+
     /// Resets all error fields.
     func clearErrors() {
         emailError = nil
