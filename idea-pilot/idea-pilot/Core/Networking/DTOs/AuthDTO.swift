@@ -31,7 +31,7 @@ nonisolated struct RefreshTokenRequestDTO: Codable, Sendable {
 extension AuthTokensDTO {
 
     /// Converts the auth response into a `UserSession` for Keychain storage.
-    func toUserSession() -> UserSession {
+    nonisolated func toUserSession() -> UserSession {
         UserSession(
             userId: userId,
             email: email,
