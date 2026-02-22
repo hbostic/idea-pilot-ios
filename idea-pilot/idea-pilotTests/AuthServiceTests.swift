@@ -60,10 +60,14 @@ private nonisolated func makeResponse(statusCode: Int) -> HTTPURLResponse {
 
 private let successTokensJSON = #"""
 {
-    "access_token": "new-access",
-    "refresh_token": "new-refresh",
-    "user_id": "user-1",
-    "email": "test@example.com"
+    "tokens": {
+        "access_token": "new-access",
+        "refresh_token": "new-refresh"
+    },
+    "user": {
+        "id": "user-1",
+        "email": "test@example.com"
+    }
 }
 """#
 
@@ -156,9 +160,9 @@ struct AuthServiceTests {
 
     @Test("register with existing email throws emailAlreadyExists")
     func registerEmailAlreadyExists() async throws {
-        let errorJSON = #"{"message":"Email already exists"}"#
+        let errorJSON = #"{"error":{"code":"CONFLICT","message":"A user with this email already exists"}}"#
         AuthServiceMockURLProtocol.handler = { _ in
-            (Data(errorJSON.utf8), makeResponse(statusCode: 400))
+            (Data(errorJSON.utf8), makeResponse(statusCode: 409))
         }
 
         let (authService, _, _, _) = try makeAuthService()

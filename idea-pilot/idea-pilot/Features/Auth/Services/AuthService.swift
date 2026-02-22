@@ -63,44 +63,50 @@ final class AuthService: AuthServiceProtocol, Sendable {
 
     func login(email: String, password: String) async throws -> UserSession {
         let dto = LoginRequestDTO(email: email, password: password)
-        let tokens: AuthTokensDTO
         do {
-            tokens = try await apiClient.request(.login(dto: dto))
+            let response: AuthResponseDTO = try await apiClient.request(.login(dto: dto))
+            let session = response.toUserSession()
+            try await tokenManager.storeSession(session)
+            return session
         } catch let error as APIError {
             throw mapAuthError(error, context: .login)
+        } catch let error as AuthError {
+            throw error
+        } catch {
+            throw AuthError.serverError(error.localizedDescription)
         }
-
-        let session = tokens.toUserSession()
-        try await tokenManager.storeSession(session)
-        return session
     }
 
     func register(email: String, password: String) async throws -> UserSession {
         let dto = RegisterRequestDTO(email: email, password: password)
-        let tokens: AuthTokensDTO
         do {
-            tokens = try await apiClient.request(.register(dto: dto))
+            let response: AuthResponseDTO = try await apiClient.request(.register(dto: dto))
+            let session = response.toUserSession()
+            try await tokenManager.storeSession(session)
+            return session
         } catch let error as APIError {
             throw mapAuthError(error, context: .register)
+        } catch let error as AuthError {
+            throw error
+        } catch {
+            throw AuthError.serverError(error.localizedDescription)
         }
-
-        let session = tokens.toUserSession()
-        try await tokenManager.storeSession(session)
-        return session
     }
 
     func auth0Login(idToken: String) async throws -> UserSession {
         let dto = Auth0RequestDTO(idToken: idToken)
-        let tokens: AuthTokensDTO
         do {
-            tokens = try await apiClient.request(.auth0(dto: dto))
+            let response: AuthResponseDTO = try await apiClient.request(.auth0(dto: dto))
+            let session = response.toUserSession()
+            try await tokenManager.storeSession(session)
+            return session
         } catch let error as APIError {
             throw mapAuthError(error, context: .auth0)
+        } catch let error as AuthError {
+            throw error
+        } catch {
+            throw AuthError.serverError(error.localizedDescription)
         }
-
-        let session = tokens.toUserSession()
-        try await tokenManager.storeSession(session)
-        return session
     }
 
     func logout() async throws {

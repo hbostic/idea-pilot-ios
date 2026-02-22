@@ -186,7 +186,7 @@ final class APIClient: Sendable {
         switch statusCode {
         case 200...299:
             return
-        case 400:
+        case 400, 409:
             let message = extractErrorMessage(from: data)
             throw APIError.badRequest(message)
         case 401:
@@ -203,8 +203,16 @@ final class APIClient: Sendable {
     }
 
     private func extractErrorMessage(from data: Data) -> String? {
-        struct ErrorBody: Decodable { let message: String? }
-        return try? JSONDecoder().decode(ErrorBody.self, from: data).message
+        // Try flat format: {"message": "..."}
+        struct FlatErrorBody: Decodable { let message: String? }
+        if let message = try? JSONDecoder().decode(FlatErrorBody.self, from: data).message {
+            return message
+        }
+        // Try nested format: {"error": {"message": "..."}}
+        struct NestedErrorBody: Decodable {
+            let error: FlatErrorBody
+        }
+        return try? JSONDecoder().decode(NestedErrorBody.self, from: data).error.message
     }
 
     #if DEBUG

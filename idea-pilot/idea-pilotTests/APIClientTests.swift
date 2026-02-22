@@ -379,13 +379,26 @@ struct EndpointTests {
 @Suite("DTOs")
 struct DTOTests {
 
-    @Test("AuthTokensDTO maps to UserSession")
+    @Test("AuthTokensDTO maps to UserSession (flat format for refresh)")
     func authTokensMapping() {
         let dto = AuthTokensDTO(
             accessToken: "access",
             refreshToken: "refresh",
             userId: "user-1",
             email: "test@example.com"
+        )
+        let session = dto.toUserSession()
+        #expect(session.userId == "user-1")
+        #expect(session.email == "test@example.com")
+        #expect(session.accessToken == "access")
+        #expect(session.refreshToken == "refresh")
+    }
+
+    @Test("AuthResponseDTO maps to UserSession (nested format for login/register)")
+    func authResponseMapping() {
+        let dto = AuthResponseDTO(
+            tokens: .init(accessToken: "access", refreshToken: "refresh"),
+            user: .init(id: "user-1", email: "test@example.com")
         )
         let session = dto.toUserSession()
         #expect(session.userId == "user-1")

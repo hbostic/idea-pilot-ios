@@ -13,12 +13,28 @@ nonisolated struct LoginRequestDTO: Codable, Sendable {
     let password: String
 }
 
-/// Response from login and token refresh endpoints.
+/// Response from token refresh endpoint (flat format).
 nonisolated struct AuthTokensDTO: Codable, Sendable {
     let accessToken: String
     let refreshToken: String
     let userId: String
     let email: String
+}
+
+/// Response from login, register, and auth0 endpoints (nested format).
+nonisolated struct AuthResponseDTO: Codable, Sendable {
+    let tokens: Tokens
+    let user: User
+
+    nonisolated struct Tokens: Codable, Sendable {
+        let accessToken: String
+        let refreshToken: String
+    }
+
+    nonisolated struct User: Codable, Sendable {
+        let id: String
+        let email: String
+    }
 }
 
 /// Request body for `POST /v1/auth/register`.
@@ -41,13 +57,26 @@ nonisolated struct RefreshTokenRequestDTO: Codable, Sendable {
 
 extension AuthTokensDTO {
 
-    /// Converts the auth response into a `UserSession` for Keychain storage.
+    /// Converts the flat token response into a `UserSession` for Keychain storage.
     nonisolated func toUserSession() -> UserSession {
         UserSession(
             userId: userId,
             email: email,
             accessToken: accessToken,
             refreshToken: refreshToken
+        )
+    }
+}
+
+extension AuthResponseDTO {
+
+    /// Converts the nested auth response into a `UserSession` for Keychain storage.
+    nonisolated func toUserSession() -> UserSession {
+        UserSession(
+            userId: user.id,
+            email: user.email,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken
         )
     }
 }

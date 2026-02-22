@@ -79,7 +79,10 @@ final class AuthViewModel {
             } catch let error as AuthError {
                 mapAuthError(error)
             } catch {
-                generalError = "Something went wrong. Please try again."
+                #if DEBUG
+                print("[AuthViewModel] Unexpected error: \(error)")
+                #endif
+                generalError = "An unexpected error occurred. Please try again."
             }
         }
     }
@@ -148,6 +151,10 @@ final class AuthViewModel {
 
     /// Maps `AuthError` to user-facing error messages on the appropriate fields.
     private func mapAuthError(_ error: AuthError) {
+        #if DEBUG
+        print("[AuthViewModel] AuthError: \(error)")
+        #endif
+
         switch error {
         case .invalidCredentials:
             generalError = "Invalid email or password"
@@ -155,8 +162,11 @@ final class AuthViewModel {
             emailError = "An account with this email already exists"
         case .networkError:
             generalError = "Network error. Please check your connection."
-        case .serverError:
+        case .serverError(let detail):
             generalError = "Something went wrong. Please try again."
+            #if DEBUG
+            print("[AuthViewModel] Server error detail: \(detail)")
+            #endif
         }
     }
 }
