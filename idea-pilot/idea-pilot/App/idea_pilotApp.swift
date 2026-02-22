@@ -2,7 +2,8 @@
 //  idea_pilotApp.swift
 //  idea-pilot
 //
-//  Created by Harold Bostic on 2/21/26.
+//  Main entry point for the Idea Pilot iOS app.
+//  Bootstraps the dependency graph and sets the root view.
 //
 
 import SwiftData
@@ -10,19 +11,44 @@ import SwiftUI
 
 /// The main entry point for the Idea Pilot iOS app.
 ///
-/// Bootstraps the app window, registers the SwiftData `ModelContainer`,
-/// and sets the root view. SwiftData discovers all related models
-/// (TaskModel, SectionModel, WeeklyCycleModel) via PlaybookModel's relationships.
+/// Creates the full dependency graph at startup:
+/// `ModelContainer` → `TokenManager` → `APIClient` → `AuthService`
 ///
-/// Future milestones will add:
-/// - Environment objects for auth state and sync engine
-/// - Deep link handling
+/// These are passed to `RootView` which gates on authentication state.
 @main
 struct idea_pilotApp: App {
+
+    let modelContainer: ModelContainer
+    let tokenManager: TokenManager
+    let apiClient: APIClient
+    let authService: AuthService
+
+    init() {
+        let container = try! ModelContainer(for: PlaybookModel.self)
+        let tm = TokenManager(
+            keychain: KeychainService(),
+            baseURL: AppConfiguration.apiBaseURL
+        )
+        let client = APIClient(
+            baseURL: AppConfiguration.apiBaseURL,
+            tokenProvider: tm
+        )
+        let auth = AuthService(
+            apiClient: client,
+            tokenManager: tm,
+            modelContainer: container
+        )
+
+        self.modelContainer = container
+        self.tokenManager = tm
+        self.apiClient = client
+        self.authService = auth
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(tokenManager: tokenManager, authService: authService)
         }
-        .modelContainer(for: PlaybookModel.self)
+        .modelContainer(modelContainer)
     }
 }
