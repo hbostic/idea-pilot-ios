@@ -21,6 +21,17 @@ nonisolated struct AuthTokensDTO: Codable, Sendable {
     let email: String
 }
 
+/// Request body for `POST /v1/auth/register`.
+nonisolated struct RegisterRequestDTO: Codable, Sendable {
+    let email: String
+    let password: String
+}
+
+/// Request body for `POST /v1/auth/auth0`.
+nonisolated struct Auth0RequestDTO: Codable, Sendable {
+    let idToken: String
+}
+
 /// Request body for `POST /v1/auth/refresh`.
 nonisolated struct RefreshTokenRequestDTO: Codable, Sendable {
     let refreshToken: String

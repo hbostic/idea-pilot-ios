@@ -59,6 +59,18 @@ extension Endpoint {
     static func refreshToken(dto: RefreshTokenRequestDTO) -> Endpoint {
         Endpoint(path: "/v1/auth/refresh", method: .post, body: dto, requiresAuth: false)
     }
+
+    static func register(dto: RegisterRequestDTO) -> Endpoint {
+        Endpoint(path: "/v1/auth/register", method: .post, body: dto, requiresAuth: false)
+    }
+
+    static func auth0(dto: Auth0RequestDTO) -> Endpoint {
+        Endpoint(path: "/v1/auth/auth0", method: .post, body: dto, requiresAuth: false)
+    }
+
+    static func logout() -> Endpoint {
+        Endpoint(path: "/v1/auth/logout", method: .post)
+    }
 }
 
 // MARK: - Playbook Endpoints
