@@ -123,7 +123,7 @@ final class PlaybookService: PlaybookServiceProtocol, Sendable {
                 existing.title = dto.title
                 existing.descriptionText = dto.description
                 existing.phaseRawValue = dto.phase
-                existing.isArchived = dto.isArchived
+                existing.isArchived = dto.archivedAt != nil
                 existing.updatedAt = dto.updatedAt
                 models.append(existing)
             } else {

@@ -84,7 +84,7 @@ private let singlePlaybookJSON = #"""
     "title": "Test Playbook",
     "description": "A test playbook",
     "phase": "PROOF",
-    "is_archived": false,
+    "archived_at": null,
     "created_at": "2025-01-01T00:00:00Z",
     "updated_at": "2025-01-02T00:00:00Z"
 }
@@ -97,7 +97,7 @@ private let playbooksArrayJSON = #"""
         "title": "Playbook One",
         "description": "First playbook",
         "phase": "PROOF",
-        "is_archived": false,
+        "archived_at": null,
         "created_at": "2025-01-01T00:00:00Z",
         "updated_at": "2025-01-02T00:00:00Z"
     },
@@ -106,7 +106,7 @@ private let playbooksArrayJSON = #"""
         "title": "Playbook Two",
         "description": null,
         "phase": "STRUCTURE",
-        "is_archived": false,
+        "archived_at": null,
         "created_at": "2025-01-03T00:00:00Z",
         "updated_at": "2025-01-04T00:00:00Z"
     }
@@ -120,7 +120,7 @@ private let updatedPlaybookJSON = #"""
         "title": "Updated Title",
         "description": "Updated description",
         "phase": "STRUCTURE",
-        "is_archived": false,
+        "archived_at": null,
         "created_at": "2025-01-01T00:00:00Z",
         "updated_at": "2025-01-10T00:00:00Z"
     }
