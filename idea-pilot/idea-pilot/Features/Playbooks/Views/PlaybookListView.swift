@@ -1,0 +1,458 @@
+//
+//  PlaybookListView.swift
+//  idea-pilot
+//
+//  Playbook List screen matching the dark theme mockup.
+//  Card rows with phase badges, create sheet, empty state, and swipe actions.
+//
+
+import SwiftUI
+
+/// The Playbook List screen showing all user playbooks as dark-themed cards.
+///
+/// Features:
+/// - Card rows with phase badge, task count, and chevron
+/// - Pull-to-refresh
+/// - Swipe-to-archive and long-press context menu
+/// - Empty state with CTA
+/// - Create sheet for new playbooks
+struct PlaybookListView: View {
+
+    @Bindable var vm: PlaybookListViewModel
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                if let error = vm.error {
+                    errorBanner(error)
+                }
+
+                if vm.isLoading && vm.playbooks.isEmpty {
+                    loadingView
+                } else if vm.isEmpty {
+                    EmptyPlaybooksView(onCreateTap: { vm.showCreateSheet = true })
+                } else {
+                    playbookList
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        }
+        .safeAreaPadding(.bottom, 72)
+        .refreshable { await vm.refresh() }
+        .onAppear { vm.loadPlaybooks() }
+        .themeBackground()
+        .navigationTitle("Playbooks")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    // Settings placeholder — future issue
+                } label: {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(Color.theme.mutedForeground)
+                }
+                .accessibilityLabel("Settings")
+            }
+        }
+        .sheet(isPresented: $vm.showCreateSheet) {
+            CreatePlaybookSheet(vm: vm)
+        }
+    }
+
+    // MARK: - Playbook List
+
+    private var playbookList: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(vm.filteredPlaybooks, id: \.id) { playbook in
+                PlaybookCardRow(
+                    playbook: playbook,
+                    onArchive: { vm.archivePlaybook(id: playbook.id) }
+                )
+            }
+
+            NewPlaybookButton(onTap: { vm.showCreateSheet = true })
+                .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Loading
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+                .frame(height: 120)
+
+            ProgressView()
+                .tint(Color.theme.mutedForeground)
+
+            Text("Loading playbooks…")
+                .font(.theme.subheadline)
+                .foregroundStyle(Color.theme.mutedForeground)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Error Banner
+
+    private func errorBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.subheadline)
+            Text(message)
+                .font(.theme.subheadline)
+        }
+        .foregroundStyle(Color.theme.destructive)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.theme.destructive.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
+        .overlay(
+            RoundedRectangle(cornerRadius: .theme.radiusMd)
+                .stroke(Color.theme.destructive.opacity(0.3), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Error: \(message)")
+    }
+}
+
+// MARK: - Playbook Card Row
+
+/// A single playbook card with phase badge, task count, and interaction gestures.
+private struct PlaybookCardRow: View {
+
+    let playbook: PlaybookModel
+    let onArchive: () -> Void
+
+    private var nowTaskCount: Int {
+        playbook.tasks.filter { $0.lane == .now && $0.status == .open }.count
+    }
+
+    var body: some View {
+        NavigationLink {
+            PlaybookHomePlaceholder(title: playbook.title)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(playbook.title)
+                        .font(.theme.body)
+                        .foregroundStyle(Color.theme.foreground)
+                        .lineLimit(1)
+
+                    PhaseBadge(phase: playbook.phase)
+
+                    if nowTaskCount > 0 {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.theme.phaseProof)
+                                .frame(width: 6, height: 6)
+
+                            Text("\(nowTaskCount) task\(nowTaskCount == 1 ? "" : "s") in Now")
+                                .font(.theme.caption)
+                                .foregroundStyle(Color.theme.mutedForeground)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.theme.mutedForeground)
+            }
+            .padding(16)
+            .cardStyle()
+        }
+        .buttonStyle(.pressable)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button {
+                onArchive()
+            } label: {
+                Label("Archive", systemImage: "archivebox")
+            }
+            .tint(.orange)
+        }
+        .contextMenu {
+            Button {
+                onArchive()
+            } label: {
+                Label("Archive", systemImage: "archivebox")
+            }
+
+            Button(role: .destructive) {
+                // Delete placeholder — future issue
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(playbook.title), \(playbook.phase.rawValue) phase"
+            + (nowTaskCount > 0 ? ", \(nowTaskCount) task\(nowTaskCount == 1 ? "" : "s") in Now" : "")
+        )
+        .accessibilityHint("Tap to open playbook")
+    }
+}
+
+// MARK: - Empty State
+
+/// Displayed when no playbooks exist.
+private struct EmptyPlaybooksView: View {
+
+    let onCreateTap: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+                .frame(height: 80)
+
+            Image(systemName: "square.stack.3d.up.slash")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.theme.mutedForeground)
+
+            VStack(spacing: 8) {
+                Text("No playbooks yet")
+                    .font(.theme.title2)
+                    .foregroundStyle(Color.theme.foreground)
+
+                Text("Create your first playbook to get started")
+                    .font(.theme.subheadline)
+                    .foregroundStyle(Color.theme.mutedForeground)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                onCreateTap()
+            } label: {
+                Text("New Playbook")
+                    .font(.theme.body)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.theme.primaryForeground)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.theme.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
+                    .shadow(color: Color.theme.primary.opacity(0.4), radius: 12, y: 4)
+            }
+            .buttonStyle(.pressable)
+            .padding(.horizontal, 24)
+            .accessibilityLabel("Create new playbook")
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - New Playbook Button
+
+/// A dashed-border button at the bottom of the list to create a new playbook.
+private struct NewPlaybookButton: View {
+
+    let onTap: () -> Void
+
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+
+                Text("New Playbook")
+                    .font(.theme.body)
+            }
+            .foregroundStyle(Color.theme.mutedForeground)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
+            .overlay(
+                RoundedRectangle(cornerRadius: .theme.radiusLg)
+                    .strokeBorder(
+                        Color.theme.mutedForeground.opacity(0.3),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [8, 6])
+                    )
+            )
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("Create new playbook")
+    }
+}
+
+// MARK: - Create Playbook Sheet
+
+/// Half-sheet for creating a new playbook with title and optional description.
+private struct CreatePlaybookSheet: View {
+
+    @Bindable var vm: PlaybookListViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    private var isTitleEmpty: Bool {
+        vm.newPlaybookTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Title field
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("TITLE")
+                            .font(.theme.overline)
+                            .foregroundStyle(Color.theme.mutedForeground)
+                            .tracking(1.0)
+
+                        TextField("My new playbook", text: $vm.newPlaybookTitle)
+                            .font(.theme.bodyRegular)
+                            .foregroundStyle(Color.theme.foreground)
+                            .textInputAutocapitalization(.sentences)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color.theme.secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: .theme.radiusMd)
+                                    .stroke(Color.theme.input, lineWidth: 1)
+                            )
+                            .accessibilityLabel("Playbook title")
+                    }
+
+                    // Description field
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("DESCRIPTION")
+                            .font(.theme.overline)
+                            .foregroundStyle(Color.theme.mutedForeground)
+                            .tracking(1.0)
+
+                        Text("Optional")
+                            .font(.theme.caption)
+                            .foregroundStyle(Color.theme.mutedForeground)
+
+                        TextField("What's this playbook about?", text: $vm.newPlaybookDescription, axis: .vertical)
+                            .font(.theme.bodyRegular)
+                            .foregroundStyle(Color.theme.foreground)
+                            .lineLimit(3...6)
+                            .textInputAutocapitalization(.sentences)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color.theme.secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: .theme.radiusMd)
+                                    .stroke(Color.theme.input, lineWidth: 1)
+                            )
+                            .accessibilityLabel("Playbook description, optional")
+                    }
+
+                    // Create button
+                    Button {
+                        vm.createPlaybook()
+                    } label: {
+                        Text("Create")
+                            .font(.theme.body)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.theme.primaryForeground)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(isTitleEmpty ? Color.theme.muted : Color.theme.primary)
+                            .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
+                            .shadow(
+                                color: isTitleEmpty ? .clear : Color.theme.primary.opacity(0.4),
+                                radius: 12, y: 4
+                            )
+                    }
+                    .buttonStyle(.pressable)
+                    .disabled(isTitleEmpty)
+                    .accessibilityLabel("Create playbook")
+                    .accessibilityHint(isTitleEmpty ? "Enter a title first" : "Creates a new playbook")
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle("New Playbook")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        vm.newPlaybookTitle = ""
+                        vm.newPlaybookDescription = ""
+                        vm.showCreateSheet = false
+                    }
+                    .foregroundStyle(Color.theme.mutedForeground)
+                }
+            }
+            .themeBackground()
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.theme.background)
+    }
+}
+
+// MARK: - Playbook Home Placeholder
+
+/// Placeholder destination for navigation until Playbook Home is implemented.
+private struct PlaybookHomePlaceholder: View {
+
+    let title: String
+
+    var body: some View {
+        ZStack {
+            Color.theme.background
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Text(title)
+                    .font(.theme.title)
+                    .foregroundStyle(Color.theme.foreground)
+
+                Text("Playbook Home coming soon")
+                    .font(.theme.subheadline)
+                    .foregroundStyle(Color.theme.mutedForeground)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Populated") {
+    NavigationStack {
+        PlaybookListView(vm: {
+            let vm = PlaybookListViewModel(playbookService: PreviewPlaybookService())
+            vm.playbooks = [
+                PlaybookModel(id: "1", title: "Side Hustle App", phase: .proof),
+                PlaybookModel(id: "2", title: "Freelance Business", phase: .structure),
+                PlaybookModel(id: "3", title: "Content Platform", phase: .repeatability),
+                PlaybookModel(id: "4", title: "SaaS Product", phase: .growth),
+            ]
+            return vm
+        }())
+    }
+}
+
+#Preview("Empty") {
+    NavigationStack {
+        PlaybookListView(vm: PlaybookListViewModel(playbookService: PreviewPlaybookService()))
+    }
+}
+
+#Preview("Error") {
+    NavigationStack {
+        PlaybookListView(vm: {
+            let vm = PlaybookListViewModel(playbookService: PreviewPlaybookService())
+            vm.error = "Network error. Please check your connection."
+            return vm
+        }())
+    }
+}
+
+/// A no-op playbook service for SwiftUI previews.
+private struct PreviewPlaybookService: PlaybookServiceProtocol {
+    func fetchPlaybooks(updatedSince: Date?) async throws -> [PlaybookModel] { [] }
+    func createPlaybook(title: String, description: String?) async throws -> PlaybookModel {
+        PlaybookModel(id: UUID().uuidString, title: title)
+    }
+    func archivePlaybook(id: String) async throws {}
+}

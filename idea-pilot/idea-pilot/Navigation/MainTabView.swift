@@ -58,6 +58,12 @@ struct MainTabView: View {
 
     @State private var selectedTab: AppTab = .now
     @State private var showCaptureSheet = false
+    @State private var playbookListVM: PlaybookListViewModel
+
+    init(playbookService: any PlaybookServiceProtocol, onSignOut: @escaping () -> Void) {
+        self.onSignOut = onSignOut
+        self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -87,7 +93,7 @@ struct MainTabView: View {
             .opacity(selectedTab == .now ? 1 : 0)
 
             NavigationStack {
-                PlaybooksPlaceholderView()
+                PlaybookListView(vm: playbookListVM)
             }
             .opacity(selectedTab == .playbooks ? 1 : 0)
         }
@@ -198,28 +204,6 @@ private struct NowPlaceholderView: View {
     }
 }
 
-/// Placeholder for the Playbooks tab content.
-private struct PlaybooksPlaceholderView: View {
-
-    var body: some View {
-        ZStack {
-            Color.theme.background
-                .ignoresSafeArea()
-
-            VStack(spacing: 24) {
-                Text("Playbooks")
-                    .font(.theme.largeTitle)
-                    .foregroundStyle(Color.theme.foreground)
-
-                Text("Coming soon")
-                    .font(.theme.subheadline)
-                    .foregroundStyle(Color.theme.mutedForeground)
-            }
-        }
-        .safeAreaPadding(.bottom, 72)
-    }
-}
-
 /// Placeholder for the Capture sheet overlay.
 private struct CapturePlaceholderView: View {
 
@@ -261,5 +245,14 @@ private struct CapturePlaceholderView: View {
 // MARK: - Preview
 
 #Preview {
-    MainTabView(onSignOut: {})
+    MainTabView(playbookService: MainTabPreviewPlaybookService(), onSignOut: {})
+}
+
+/// A no-op playbook service for MainTabView previews.
+private struct MainTabPreviewPlaybookService: PlaybookServiceProtocol {
+    func fetchPlaybooks(updatedSince: Date?) async throws -> [PlaybookModel] { [] }
+    func createPlaybook(title: String, description: String?) async throws -> PlaybookModel {
+        PlaybookModel(id: UUID().uuidString, title: title)
+    }
+    func archivePlaybook(id: String) async throws {}
 }

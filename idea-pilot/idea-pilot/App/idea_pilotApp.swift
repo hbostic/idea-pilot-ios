@@ -22,6 +22,7 @@ struct idea_pilotApp: App {
     let tokenManager: TokenManager
     let apiClient: APIClient
     let authService: AuthService
+    let playbookService: PlaybookService
 
     init() {
         let container = try! ModelContainer(for: PlaybookModel.self)
@@ -39,15 +40,18 @@ struct idea_pilotApp: App {
             modelContainer: container
         )
 
+        let playbooks = PlaybookService(apiClient: client, modelContainer: container)
+
         self.modelContainer = container
         self.tokenManager = tm
         self.apiClient = client
         self.authService = auth
+        self.playbookService = playbooks
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView(tokenManager: tokenManager, authService: authService)
+            RootView(tokenManager: tokenManager, authService: authService, playbookService: playbookService)
         }
         .modelContainer(modelContainer)
     }
