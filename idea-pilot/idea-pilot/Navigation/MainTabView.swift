@@ -2,7 +2,7 @@
 //  MainTabView.swift
 //  idea-pilot
 //
-//  Custom 3-tab bottom bar: Now, Capture (sheet), Playbooks.
+//  Custom 3-tab bottom bar: Now, Create (+), Playbooks.
 //  Uses a glass-effect custom tab bar instead of the system TabView.
 //
 
@@ -46,7 +46,7 @@ enum AppTab: Int, CaseIterable {
 ///
 /// Features a custom glass-effect tab bar with three items:
 /// - **Now** — Playbook home (left)
-/// - **Capture** — Opens a sheet overlay (center, larger purple icon)
+/// - **Create (+)** — Opens the Create Playbook sheet (center, larger purple icon)
 /// - **Playbooks** — Playbook list (right)
 ///
 /// Both Now and Playbooks maintain their own `NavigationStack` so
@@ -57,7 +57,6 @@ struct MainTabView: View {
     var onSignOut: () -> Void
 
     @State private var selectedTab: AppTab = .now
-    @State private var showCaptureSheet = false
     @State private var playbookListVM: PlaybookListViewModel
 
     init(playbookService: any PlaybookServiceProtocol, onSignOut: @escaping () -> Void) {
@@ -73,13 +72,10 @@ struct MainTabView: View {
             // Custom glass tab bar overlay.
             CustomTabBar(
                 selectedTab: $selectedTab,
-                onCaptureTap: { showCaptureSheet = true }
+                onCaptureTap: { playbookListVM.showCreateSheet = true }
             )
         }
         .themeBackground()
-        .sheet(isPresented: $showCaptureSheet) {
-            CapturePlaceholderView()
-        }
     }
 
     // MARK: - Tab Content
@@ -201,44 +197,6 @@ private struct NowPlaceholderView: View {
             }
         }
         .safeAreaPadding(.bottom, 72)
-    }
-}
-
-/// Placeholder for the Capture sheet overlay.
-private struct CapturePlaceholderView: View {
-
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.theme.background
-                    .ignoresSafeArea()
-
-                VStack(spacing: 24) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color.theme.primary)
-
-                    Text("Capture")
-                        .font(.theme.largeTitle)
-                        .foregroundStyle(Color.theme.foreground)
-
-                    Text("Quick capture coming soon")
-                        .font(.theme.subheadline)
-                        .foregroundStyle(Color.theme.mutedForeground)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Color.theme.primary)
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color.theme.background)
     }
 }
 
