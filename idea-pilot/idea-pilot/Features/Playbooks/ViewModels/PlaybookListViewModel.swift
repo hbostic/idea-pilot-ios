@@ -26,6 +26,7 @@ final class PlaybookListViewModel {
 
     var showCreateSheet = false
     var newPlaybookTitle = ""
+    var newPlaybookDescription = ""
 
     // MARK: - Filter State
 
@@ -100,11 +101,17 @@ final class PlaybookListViewModel {
         let trimmed = newPlaybookTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
+        let desc = newPlaybookDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+
         Task {
             do {
-                let playbook = try await playbookService.createPlaybook(title: trimmed, description: nil)
+                let playbook = try await playbookService.createPlaybook(
+                    title: trimmed,
+                    description: desc.isEmpty ? nil : desc
+                )
                 playbooks.append(playbook)
                 newPlaybookTitle = ""
+                newPlaybookDescription = ""
                 showCreateSheet = false
             } catch let error as PlaybookError {
                 mapError(error)
