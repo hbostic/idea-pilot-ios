@@ -110,8 +110,19 @@ extension Endpoint {
 
 extension Endpoint {
 
-    static func getTasks(playbookId: String) -> Endpoint {
-        Endpoint(path: "/v1/playbooks/\(playbookId)/tasks", method: .get)
+    static func getTasks(playbookId: String, lane: String? = nil, updatedSince: Date? = nil) -> Endpoint {
+        var queryItems: [URLQueryItem] = []
+        if let lane {
+            queryItems.append(URLQueryItem(name: "lane", value: lane))
+        }
+        if let date = updatedSince {
+            queryItems.append(URLQueryItem(name: "updated_since", value: ISO8601DateFormatter().string(from: date)))
+        }
+        return Endpoint(
+            path: "/v1/playbooks/\(playbookId)/tasks",
+            method: .get,
+            queryItems: queryItems.isEmpty ? nil : queryItems
+        )
     }
 
     static func createTask(dto: CreateTaskDTO) -> Endpoint {
@@ -120,6 +131,10 @@ extension Endpoint {
 
     static func updateTask(id: String, dto: UpdateTaskDTO) -> Endpoint {
         Endpoint(path: "/v1/tasks/\(id)", method: .patch, body: dto)
+    }
+
+    static func completeTask(id: String) -> Endpoint {
+        Endpoint(path: "/v1/tasks/\(id)/complete", method: .post)
     }
 
     static func deleteTask(id: String) -> Endpoint {
