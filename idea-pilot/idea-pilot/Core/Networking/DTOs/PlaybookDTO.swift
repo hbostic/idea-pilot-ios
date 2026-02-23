@@ -13,7 +13,7 @@ nonisolated struct PlaybookDTO: Codable, Sendable {
     let title: String
     let description: String?
     let phase: String
-    let isArchived: Bool
+    let archivedAt: Date?
     let createdAt: Date
     let updatedAt: Date
     let tasks: [TaskDTO]?
@@ -47,7 +47,7 @@ extension PlaybookDTO {
             title: title,
             descriptionText: description,
             phase: PlaybookPhase(rawValue: phase) ?? .proof,
-            isArchived: isArchived,
+            isArchived: archivedAt != nil,
             createdAt: createdAt,
             updatedAt: updatedAt
         )

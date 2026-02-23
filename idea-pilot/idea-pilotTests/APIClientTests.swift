@@ -415,7 +415,7 @@ struct DTOTests {
             "title": "My Playbook",
             "description": null,
             "phase": "PROOF",
-            "is_archived": false,
+            "archived_at": null,
             "created_at": "2026-01-01T00:00:00Z",
             "updated_at": "2026-01-01T00:00:00Z",
             "tasks": null,
@@ -430,7 +430,7 @@ struct DTOTests {
         #expect(dto.id == "pb-1")
         #expect(dto.title == "My Playbook")
         #expect(dto.phase == "PROOF")
-        #expect(dto.isArchived == false)
+        #expect(dto.archivedAt == nil)
     }
 
     @Test("TaskDTO Codable roundtrip with snake_case")
