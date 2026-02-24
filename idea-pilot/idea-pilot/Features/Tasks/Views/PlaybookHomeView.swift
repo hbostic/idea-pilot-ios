@@ -75,7 +75,20 @@ struct PlaybookHomeView: View {
             }
         }
         .sheet(item: $vm.selectedTask) { task in
-            TaskDetailPlaceholder(task: task)
+            TaskDetailSheet(
+                vm: TaskDetailViewModel(
+                    task: task,
+                    taskService: vm.taskService,
+                    onComplete: { id in
+                        vm.completeTask(id: id)
+                        vm.clearSelectedTask()
+                    },
+                    onDelete: { id in
+                        vm.allTasks.removeAll { $0.id == id }
+                        vm.clearSelectedTask()
+                    }
+                )
+            )
         }
     }
 
@@ -628,35 +641,6 @@ private struct EmptyLaneView: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-    }
-}
-
-// MARK: - Task Detail Placeholder
-
-/// Placeholder for the task detail half-sheet until Issue #23 is implemented.
-private struct TaskDetailPlaceholder: View {
-
-    let task: TaskModel
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Text(task.title)
-                    .font(.theme.title2)
-                    .foregroundStyle(Color.theme.foreground)
-
-                Text("Task detail coming soon")
-                    .font(.theme.subheadline)
-                    .foregroundStyle(Color.theme.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .themeBackground()
-            .navigationTitle("Task Detail")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color.theme.background)
     }
 }
 
