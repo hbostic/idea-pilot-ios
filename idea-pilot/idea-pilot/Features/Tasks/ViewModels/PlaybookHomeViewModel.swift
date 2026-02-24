@@ -71,7 +71,7 @@ final class PlaybookHomeViewModel {
 
     // MARK: - Dependencies
 
-    private let taskService: any TaskServiceProtocol
+    let taskService: any TaskServiceProtocol
 
     // MARK: - Init
 
