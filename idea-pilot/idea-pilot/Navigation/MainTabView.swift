@@ -56,11 +56,14 @@ struct MainTabView: View {
     /// Called when the user taps sign out. Owned by RootView.
     var onSignOut: () -> Void
 
+    let taskService: any TaskServiceProtocol
+
     @State private var selectedTab: AppTab = .now
     @State private var playbookListVM: PlaybookListViewModel
 
-    init(playbookService: any PlaybookServiceProtocol, onSignOut: @escaping () -> Void) {
+    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, onSignOut: @escaping () -> Void) {
         self.onSignOut = onSignOut
+        self.taskService = taskService
         self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
     }
 
@@ -89,7 +92,7 @@ struct MainTabView: View {
             .opacity(selectedTab == .now ? 1 : 0)
 
             NavigationStack {
-                PlaybookListView(vm: playbookListVM)
+                PlaybookListView(vm: playbookListVM, taskService: taskService)
             }
             .opacity(selectedTab == .playbooks ? 1 : 0)
         }
@@ -203,7 +206,11 @@ private struct NowPlaceholderView: View {
 // MARK: - Preview
 
 #Preview {
-    MainTabView(playbookService: MainTabPreviewPlaybookService(), onSignOut: {})
+    MainTabView(
+        playbookService: MainTabPreviewPlaybookService(),
+        taskService: MainTabPreviewTaskService(),
+        onSignOut: {}
+    )
 }
 
 /// A no-op playbook service for MainTabView previews.
@@ -213,4 +220,20 @@ private struct MainTabPreviewPlaybookService: PlaybookServiceProtocol {
         PlaybookModel(id: UUID().uuidString, title: title)
     }
     func archivePlaybook(id: String) async throws {}
+}
+
+/// A no-op task service for MainTabView previews.
+private struct MainTabPreviewTaskService: TaskServiceProtocol {
+    func fetchTasks(playbookId: String, lane: TaskLane?, updatedSince: Date?) async throws -> [TaskModel] { [] }
+    func createTask(playbookId: String, title: String, detail: String?, lane: TaskLane, estimatedMinutes: Int) async throws -> TaskModel {
+        TaskModel(playbookId: playbookId, title: title, lane: lane, estimatedMinutes: estimatedMinutes)
+    }
+    func updateTask(id: String, dto: UpdateTaskDTO) async throws -> TaskModel {
+        TaskModel(playbookId: "pb-1", title: "Updated")
+    }
+    func completeTask(id: String) async throws -> TaskModel {
+        TaskModel(playbookId: "pb-1", title: "Done", status: .done, completedAt: .now)
+    }
+    func reorderTasks(playbookId: String, lane: TaskLane, taskIds: [String]) async throws {}
+    func deleteTask(id: String) async throws {}
 }

@@ -19,6 +19,7 @@ import SwiftUI
 struct PlaybookListView: View {
 
     @Bindable var vm: PlaybookListViewModel
+    let taskService: any TaskServiceProtocol
 
     var body: some View {
         ScrollView {
@@ -67,6 +68,7 @@ struct PlaybookListView: View {
             ForEach(vm.filteredPlaybooks, id: \.id) { playbook in
                 PlaybookCardRow(
                     playbook: playbook,
+                    taskService: taskService,
                     onArchive: { vm.archivePlaybook(id: playbook.id) }
                 )
             }
@@ -122,6 +124,7 @@ struct PlaybookListView: View {
 private struct PlaybookCardRow: View {
 
     let playbook: PlaybookModel
+    let taskService: any TaskServiceProtocol
     let onArchive: () -> Void
 
     private var nowTaskCount: Int {
@@ -130,7 +133,7 @@ private struct PlaybookCardRow: View {
 
     var body: some View {
         NavigationLink {
-            PlaybookHomePlaceholder(title: playbook.title)
+            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService))
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -389,70 +392,69 @@ private struct CreatePlaybookSheet: View {
     }
 }
 
-// MARK: - Playbook Home Placeholder
-
-/// Placeholder destination for navigation until Playbook Home is implemented.
-private struct PlaybookHomePlaceholder: View {
-
-    let title: String
-
-    var body: some View {
-        ZStack {
-            Color.theme.background
-                .ignoresSafeArea()
-
-            VStack(spacing: 16) {
-                Text(title)
-                    .font(.theme.title)
-                    .foregroundStyle(Color.theme.foreground)
-
-                Text("Playbook Home coming soon")
-                    .font(.theme.subheadline)
-                    .foregroundStyle(Color.theme.mutedForeground)
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Populated") {
     NavigationStack {
-        PlaybookListView(vm: {
-            let vm = PlaybookListViewModel(playbookService: PreviewPlaybookService())
-            vm.playbooks = [
-                PlaybookModel(id: "1", title: "Side Hustle App", phase: .proof),
-                PlaybookModel(id: "2", title: "Freelance Business", phase: .structure),
-                PlaybookModel(id: "3", title: "Content Platform", phase: .repeatability),
-                PlaybookModel(id: "4", title: "SaaS Product", phase: .growth),
-            ]
-            return vm
-        }())
+        PlaybookListView(
+            vm: {
+                let vm = PlaybookListViewModel(playbookService: PlaybookListPreviewPlaybookService())
+                vm.playbooks = [
+                    PlaybookModel(id: "1", title: "Side Hustle App", phase: .proof),
+                    PlaybookModel(id: "2", title: "Freelance Business", phase: .structure),
+                    PlaybookModel(id: "3", title: "Content Platform", phase: .repeatability),
+                    PlaybookModel(id: "4", title: "SaaS Product", phase: .growth),
+                ]
+                return vm
+            }(),
+            taskService: PlaybookListPreviewTaskService()
+        )
     }
 }
 
 #Preview("Empty") {
     NavigationStack {
-        PlaybookListView(vm: PlaybookListViewModel(playbookService: PreviewPlaybookService()))
+        PlaybookListView(
+            vm: PlaybookListViewModel(playbookService: PlaybookListPreviewPlaybookService()),
+            taskService: PlaybookListPreviewTaskService()
+        )
     }
 }
 
 #Preview("Error") {
     NavigationStack {
-        PlaybookListView(vm: {
-            let vm = PlaybookListViewModel(playbookService: PreviewPlaybookService())
-            vm.error = "Network error. Please check your connection."
-            return vm
-        }())
+        PlaybookListView(
+            vm: {
+                let vm = PlaybookListViewModel(playbookService: PlaybookListPreviewPlaybookService())
+                vm.error = "Network error. Please check your connection."
+                return vm
+            }(),
+            taskService: PlaybookListPreviewTaskService()
+        )
     }
 }
 
 /// A no-op playbook service for SwiftUI previews.
-private struct PreviewPlaybookService: PlaybookServiceProtocol {
+private struct PlaybookListPreviewPlaybookService: PlaybookServiceProtocol {
     func fetchPlaybooks(updatedSince: Date?) async throws -> [PlaybookModel] { [] }
     func createPlaybook(title: String, description: String?) async throws -> PlaybookModel {
         PlaybookModel(id: UUID().uuidString, title: title)
     }
     func archivePlaybook(id: String) async throws {}
+}
+
+/// A no-op task service for SwiftUI previews.
+private struct PlaybookListPreviewTaskService: TaskServiceProtocol {
+    func fetchTasks(playbookId: String, lane: TaskLane?, updatedSince: Date?) async throws -> [TaskModel] { [] }
+    func createTask(playbookId: String, title: String, detail: String?, lane: TaskLane, estimatedMinutes: Int) async throws -> TaskModel {
+        TaskModel(playbookId: playbookId, title: title, lane: lane, estimatedMinutes: estimatedMinutes)
+    }
+    func updateTask(id: String, dto: UpdateTaskDTO) async throws -> TaskModel {
+        TaskModel(playbookId: "pb-1", title: "Updated")
+    }
+    func completeTask(id: String) async throws -> TaskModel {
+        TaskModel(playbookId: "pb-1", title: "Done", status: .done, completedAt: .now)
+    }
+    func reorderTasks(playbookId: String, lane: TaskLane, taskIds: [String]) async throws {}
+    func deleteTask(id: String) async throws {}
 }
