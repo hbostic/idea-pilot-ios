@@ -72,6 +72,7 @@ final class PlaybookHomeViewModel {
     // MARK: - Dependencies
 
     let taskService: any TaskServiceProtocol
+    let sectionService: any SectionServiceProtocol
 
     // MARK: - Init
 
@@ -80,9 +81,11 @@ final class PlaybookHomeViewModel {
     /// - Parameters:
     ///   - playbook: The playbook whose tasks are managed.
     ///   - taskService: The service for task API calls and persistence.
-    init(playbook: PlaybookModel, taskService: any TaskServiceProtocol) {
+    ///   - sectionService: The service for section API calls and persistence.
+    init(playbook: PlaybookModel, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol) {
         self.playbook = playbook
         self.taskService = taskService
+        self.sectionService = sectionService
     }
 
     // MARK: - Actions

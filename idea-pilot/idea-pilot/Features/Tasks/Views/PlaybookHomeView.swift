@@ -651,7 +651,8 @@ private struct EmptyLaneView: View {
         PlaybookHomeView(vm: {
             let vm = PlaybookHomeViewModel(
                 playbook: PlaybookModel(id: "pb-1", title: "Side Hustle App", phase: .proof),
-                taskService: PreviewTaskService()
+                taskService: PreviewTaskService(),
+                sectionService: PreviewSectionService()
             )
             vm.allTasks = [
                 TaskModel(id: "t-1", playbookId: "pb-1", title: "Research competitors", lane: .now, estimatedMinutes: 90, orderIndex: 0),
@@ -668,8 +669,17 @@ private struct EmptyLaneView: View {
     NavigationStack {
         PlaybookHomeView(vm: PlaybookHomeViewModel(
             playbook: PlaybookModel(id: "pb-1", title: "Empty Playbook"),
-            taskService: PreviewTaskService()
+            taskService: PreviewTaskService(),
+            sectionService: PreviewSectionService()
         ))
+    }
+}
+
+/// A no-op section service for SwiftUI previews.
+private struct PreviewSectionService: SectionServiceProtocol {
+    func fetchSections(playbookId: String, updatedSince: Date?) async throws -> [SectionModel] { [] }
+    func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
+        SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
     }
 }
 

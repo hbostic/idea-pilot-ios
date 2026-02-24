@@ -58,15 +58,17 @@ struct MainTabView: View {
 
     let taskService: any TaskServiceProtocol
     let playbookService: any PlaybookServiceProtocol
+    let sectionService: any SectionServiceProtocol
 
     @State private var selectedTab: AppTab = .now
     @State private var playbookListVM: PlaybookListViewModel
     @State private var showQuickAddSheet = false
 
-    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, onSignOut: @escaping () -> Void) {
+    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, onSignOut: @escaping () -> Void) {
         self.onSignOut = onSignOut
         self.taskService = taskService
         self.playbookService = playbookService
+        self.sectionService = sectionService
         self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
     }
 
@@ -103,7 +105,7 @@ struct MainTabView: View {
             .opacity(selectedTab == .now ? 1 : 0)
 
             NavigationStack {
-                PlaybookListView(vm: playbookListVM, taskService: taskService)
+                PlaybookListView(vm: playbookListVM, taskService: taskService, sectionService: sectionService)
             }
             .opacity(selectedTab == .playbooks ? 1 : 0)
         }
@@ -220,6 +222,7 @@ private struct NowPlaceholderView: View {
     MainTabView(
         playbookService: MainTabPreviewPlaybookService(),
         taskService: MainTabPreviewTaskService(),
+        sectionService: MainTabPreviewSectionService(),
         onSignOut: {}
     )
 }
@@ -231,6 +234,14 @@ private struct MainTabPreviewPlaybookService: PlaybookServiceProtocol {
         PlaybookModel(id: UUID().uuidString, title: title)
     }
     func archivePlaybook(id: String) async throws {}
+}
+
+/// A no-op section service for MainTabView previews.
+private struct MainTabPreviewSectionService: SectionServiceProtocol {
+    func fetchSections(playbookId: String, updatedSince: Date?) async throws -> [SectionModel] { [] }
+    func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
+        SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
+    }
 }
 
 /// A no-op task service for MainTabView previews.
