@@ -21,6 +21,11 @@ struct PlaybookHomeView: View {
 
     @Bindable var vm: PlaybookHomeViewModel
 
+    // MARK: - Reorder State
+
+    @State private var draggingTaskId: String? = nil
+    @State private var dragYOffset: CGFloat = 0
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -89,22 +94,121 @@ struct PlaybookHomeView: View {
 
     // MARK: - Task List
 
+    /// Estimated height of a task card including spacing, used for reorder position calculations.
+    private let cardHeight: CGFloat = 80
+
     private var taskList: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(vm.tasksInCurrentLane, id: \.id) { task in
+        let tasks = vm.tasksInCurrentLane
+
+        return LazyVStack(spacing: 12) {
+            ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
+                let isDragging = draggingTaskId == task.id
+                let shiftOffset = reorderShiftOffset(for: index, in: tasks)
+
                 TaskCardRow(
                     task: task,
                     showCheckbox: vm.selectedLane != .later,
                     currentLane: vm.selectedLane,
+                    isDragReordering: draggingTaskId != nil,
                     onTap: { vm.selectTask(task) },
                     onComplete: { vm.completeTask(id: task.id) },
                     onMove: { lane in vm.moveTask(id: task.id, toLane: lane) }
                 )
+                .scaleEffect(isDragging ? 1.02 : 1.0)
+                .shadow(
+                    color: isDragging ? .black.opacity(0.3) : .clear,
+                    radius: isDragging ? 12 : 0,
+                    y: isDragging ? 4 : 0
+                )
+                .offset(y: isDragging ? dragYOffset : shiftOffset)
+                .zIndex(isDragging ? 1 : 0)
+                .motionSafe(.spring(response: 0.3, dampingFraction: 0.7))
+                .gesture(reorderGesture(for: task.id, at: index, count: tasks.count))
+                .accessibilityAction(named: "Move up") { vm.moveTaskUp(id: task.id) }
+                .accessibilityAction(named: "Move down") { vm.moveTaskDown(id: task.id) }
             }
 
             AddTaskButton(lane: vm.selectedLane)
                 .padding(.top, 4)
         }
+    }
+
+    // MARK: - Reorder Gesture
+
+    /// Builds a long-press-then-drag gesture for initiating reorder on a specific card.
+    private func reorderGesture(for taskId: String, at sourceIndex: Int, count: Int) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.4)
+            .sequenced(before: DragGesture())
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    // Long press recognized — lift the card.
+                    if draggingTaskId == nil {
+                        draggingTaskId = taskId
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                    }
+                case .second(true, let drag):
+                    // Dragging after long press.
+                    if let drag {
+                        dragYOffset = drag.translation.height
+                    }
+                default:
+                    break
+                }
+            }
+            .onEnded { _ in
+                guard draggingTaskId == taskId else { return }
+
+                // Calculate target index from drag offset.
+                let rawTarget = sourceIndex + Int(round(dragYOffset / cardHeight))
+                let targetIndex = max(0, min(rawTarget, count - 1))
+
+                // Build reordered IDs.
+                var ids = vm.tasksInCurrentLane.map(\.id)
+                let movedId = ids.remove(at: sourceIndex)
+                ids.insert(movedId, at: targetIndex)
+
+                vm.reorderTasks(ids: ids)
+
+                // Drop haptic.
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+
+                // Reset state.
+                withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+                    draggingTaskId = nil
+                    dragYOffset = 0
+                }
+            }
+    }
+
+    // MARK: - Reorder Shift Calculation
+
+    /// Calculates the vertical offset for non-dragged cards to make room for the dragged card.
+    private func reorderShiftOffset(for index: Int, in tasks: [TaskModel]) -> CGFloat {
+        guard let draggingId = draggingTaskId,
+              let sourceIndex = tasks.firstIndex(where: { $0.id == draggingId }) else {
+            return 0
+        }
+
+        let rawTarget = sourceIndex + Int(round(dragYOffset / cardHeight))
+        let targetIndex = max(0, min(rawTarget, tasks.count - 1))
+
+        // Cards between source and target need to shift.
+        if sourceIndex < targetIndex {
+            // Dragging down — cards in between shift up.
+            if index > sourceIndex && index <= targetIndex {
+                return -cardHeight
+            }
+        } else if sourceIndex > targetIndex {
+            // Dragging up — cards in between shift down.
+            if index >= targetIndex && index < sourceIndex {
+                return cardHeight
+            }
+        }
+
+        return 0
     }
 
     // MARK: - Loading
@@ -221,6 +325,7 @@ private struct TaskCardRow: View {
     let task: TaskModel
     let showCheckbox: Bool
     let currentLane: TaskLane
+    let isDragReordering: Bool
     let onTap: () -> Void
     let onComplete: () -> Void
     let onMove: (TaskLane) -> Void
@@ -393,6 +498,7 @@ private struct TaskCardRow: View {
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 10)
             .onChanged { value in
+                guard !isDragReordering else { return }
                 let horizontal = value.translation.width
 
                 if swipeDirection == nil && abs(horizontal) > SwipeConstants.directionLockThreshold {
