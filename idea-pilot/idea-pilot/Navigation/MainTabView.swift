@@ -46,7 +46,7 @@ enum AppTab: Int, CaseIterable {
 ///
 /// Features a custom glass-effect tab bar with three items:
 /// - **Now** — Playbook home (left)
-/// - **Create (+)** — Opens the Create Playbook sheet (center, larger purple icon)
+/// - **Create (+)** — Opens the Quick Add sheet (center, larger purple icon)
 /// - **Playbooks** — Playbook list (right)
 ///
 /// Both Now and Playbooks maintain their own `NavigationStack` so
@@ -57,13 +57,16 @@ struct MainTabView: View {
     var onSignOut: () -> Void
 
     let taskService: any TaskServiceProtocol
+    let playbookService: any PlaybookServiceProtocol
 
     @State private var selectedTab: AppTab = .now
     @State private var playbookListVM: PlaybookListViewModel
+    @State private var showQuickAddSheet = false
 
     init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, onSignOut: @escaping () -> Void) {
         self.onSignOut = onSignOut
         self.taskService = taskService
+        self.playbookService = playbookService
         self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
     }
 
@@ -75,10 +78,18 @@ struct MainTabView: View {
             // Custom glass tab bar overlay.
             CustomTabBar(
                 selectedTab: $selectedTab,
-                onCaptureTap: { playbookListVM.showCreateSheet = true }
+                onCaptureTap: { showQuickAddSheet = true }
             )
         }
         .themeBackground()
+        .sheet(isPresented: $showQuickAddSheet) {
+            QuickAddSheet(
+                vm: QuickAddViewModel(
+                    taskService: taskService,
+                    playbookService: playbookService
+                )
+            )
+        }
     }
 
     // MARK: - Tab Content

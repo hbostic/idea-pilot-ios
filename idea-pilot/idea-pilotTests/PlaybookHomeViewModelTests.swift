@@ -31,8 +31,13 @@ final class MockTaskService: TaskServiceProtocol, @unchecked Sendable {
     nonisolated(unsafe) var completeCallCount = 0
     nonisolated(unsafe) var updateCallCount = 0
     nonisolated(unsafe) var reorderCallCount = 0
+    nonisolated(unsafe) var createCallCount = 0
     nonisolated(unsafe) var deleteCallCount = 0
 
+    nonisolated(unsafe) var capturedCreatePlaybookId: String?
+    nonisolated(unsafe) var capturedCreateTitle: String?
+    nonisolated(unsafe) var capturedCreateLane: TaskLane?
+    nonisolated(unsafe) var capturedCreateEstimate: Int?
     nonisolated(unsafe) var capturedCompleteId: String?
     nonisolated(unsafe) var capturedUpdateId: String?
     nonisolated(unsafe) var capturedUpdateDTO: UpdateTaskDTO?
@@ -45,6 +50,11 @@ final class MockTaskService: TaskServiceProtocol, @unchecked Sendable {
     }
 
     nonisolated func createTask(playbookId: String, title: String, detail: String?, lane: TaskLane, estimatedMinutes: Int) async throws -> TaskModel {
+        createCallCount += 1
+        capturedCreatePlaybookId = playbookId
+        capturedCreateTitle = title
+        capturedCreateLane = lane
+        capturedCreateEstimate = estimatedMinutes
         return try createResult.get()
     }
 
