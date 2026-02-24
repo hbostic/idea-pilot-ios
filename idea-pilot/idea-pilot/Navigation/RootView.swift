@@ -20,6 +20,7 @@ struct RootView: View {
     let tokenManager: TokenManager
     let authService: any AuthServiceProtocol
     let playbookService: any PlaybookServiceProtocol
+    let taskService: any TaskServiceProtocol
 
     @State private var isAuthenticated = false
     @State private var isCheckingAuth = true
@@ -30,7 +31,7 @@ struct RootView: View {
             if isCheckingAuth {
                 splashView
             } else if isAuthenticated {
-                MainTabView(playbookService: playbookService, onSignOut: signOut)
+                MainTabView(playbookService: playbookService, taskService: taskService, onSignOut: signOut)
             } else if let vm = authViewModel {
                 AuthView(vm: vm)
             }
