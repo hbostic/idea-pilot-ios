@@ -95,8 +95,10 @@ struct PlaybookHomeView: View {
                 TaskCardRow(
                     task: task,
                     showCheckbox: vm.selectedLane != .later,
+                    currentLane: vm.selectedLane,
                     onTap: { vm.selectTask(task) },
-                    onComplete: { vm.completeTask(id: task.id) }
+                    onComplete: { vm.completeTask(id: task.id) },
+                    onMove: { lane in vm.moveTask(id: task.id, toLane: lane) }
                 )
             }
 
@@ -209,16 +211,77 @@ private struct LaneSegmentedControl: View {
 
 // MARK: - Task Card Row
 
-/// A single task card with optional checkbox, title, and time estimate pill.
+/// A single task card with optional checkbox, title, time estimate pill, and swipe gestures.
+///
+/// Swipe gestures:
+/// - **Swipe right**: Green reveal background; releasing past threshold completes the task.
+/// - **Swipe left**: Reveals lane-move buttons for valid destination lanes.
 private struct TaskCardRow: View {
 
     let task: TaskModel
     let showCheckbox: Bool
+    let currentLane: TaskLane
     let onTap: () -> Void
     let onComplete: () -> Void
+    let onMove: (TaskLane) -> Void
+
+    // MARK: - Swipe State
+
+    @State private var dragOffset: CGFloat = 0
+    @State private var swipeDirection: SwipeDirection? = nil
+    @State private var hasTriggeredHaptic = false
+
+    private enum SwipeDirection {
+        case left, right
+    }
+
+    private enum SwipeConstants {
+        static let completeThreshold: CGFloat = 120
+        static let maxRightSwipe: CGFloat = 160
+        static let laneButtonRevealWidth: CGFloat = 140
+        static let directionLockThreshold: CGFloat = 10
+    }
+
+    private var moveDestinations: [TaskLane] {
+        TaskLane.allCases.filter { $0 != currentLane }
+    }
+
+    // MARK: - Body
 
     var body: some View {
+        ZStack(alignment: .leading) {
+            swipeBackgroundLayer
+
+            cardContent
+                .offset(x: dragOffset)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
+        .simultaneousGesture(dragGesture)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(task.title), \(task.estimatedMinutes) minutes"
+            + (showCheckbox ? ", double tap to complete" : "")
+        )
+        .accessibilityHint("Tap for details")
+        .accessibilityAction(named: "Complete task") { onComplete() }
+        .accessibilityAction(named: "Move to \(moveDestinations.first?.rawValue ?? "")") {
+            if let dest = moveDestinations.first { onMove(dest) }
+        }
+        .accessibilityAction(named: "Move to \(moveDestinations.last?.rawValue ?? "")") {
+            if let dest = moveDestinations.last, moveDestinations.count > 1 { onMove(dest) }
+        }
+    }
+
+    // MARK: - Card Content
+
+    private var cardContent: some View {
         Button {
+            if dragOffset != 0 {
+                withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+                    dragOffset = 0
+                }
+                return
+            }
             onTap()
         } label: {
             HStack(spacing: 12) {
@@ -249,13 +312,9 @@ private struct TaskCardRow: View {
             .cardStyle()
         }
         .buttonStyle(.pressable)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "\(task.title), \(task.estimatedMinutes) minutes"
-            + (showCheckbox ? ", double tap to complete" : "")
-        )
-        .accessibilityHint("Tap for details")
     }
+
+    // MARK: - Checkbox
 
     private var checkboxButton: some View {
         Button {
@@ -269,6 +328,129 @@ private struct TaskCardRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Complete task")
+    }
+
+    // MARK: - Swipe Background
+
+    @ViewBuilder
+    private var swipeBackgroundLayer: some View {
+        if dragOffset > 0 {
+            completeRevealBackground
+        } else if dragOffset < 0 {
+            laneButtonsBackground
+        }
+    }
+
+    private var completeRevealBackground: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(.black)
+                .padding(.leading, 20)
+                .scaleEffect(dragOffset >= SwipeConstants.completeThreshold ? 1.2 : 1.0)
+                .motionSafe(.spring(response: 0.3, dampingFraction: 0.7))
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.theme.accent)
+        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
+    }
+
+    private var laneButtonsBackground: some View {
+        HStack(spacing: 0) {
+            Spacer()
+
+            ForEach(moveDestinations, id: \.self) { lane in
+                Button {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                    onMove(lane)
+                    withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+                        dragOffset = 0
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: laneIcon(for: lane))
+                            .font(.system(size: 18, weight: .semibold))
+                        Text(lane.rawValue)
+                            .font(.theme.badge)
+                            .fontWeight(.bold)
+                    }
+                    .foregroundStyle(Color.theme.primaryForeground)
+                    .frame(width: SwipeConstants.laneButtonRevealWidth / CGFloat(moveDestinations.count))
+                    .frame(maxHeight: .infinity)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(Color.theme.primary)
+        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
+    }
+
+    // MARK: - Drag Gesture
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                let horizontal = value.translation.width
+
+                if swipeDirection == nil && abs(horizontal) > SwipeConstants.directionLockThreshold {
+                    swipeDirection = horizontal > 0 ? .right : .left
+                }
+
+                guard let direction = swipeDirection else { return }
+
+                switch direction {
+                case .right:
+                    dragOffset = min(max(horizontal, 0), SwipeConstants.maxRightSwipe)
+
+                    if dragOffset >= SwipeConstants.completeThreshold && !hasTriggeredHaptic {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        hasTriggeredHaptic = true
+                    }
+
+                    if dragOffset < SwipeConstants.completeThreshold {
+                        hasTriggeredHaptic = false
+                    }
+
+                case .left:
+                    dragOffset = max(horizontal, -SwipeConstants.laneButtonRevealWidth)
+                }
+            }
+            .onEnded { _ in
+                let direction = swipeDirection
+                swipeDirection = nil
+                hasTriggeredHaptic = false
+
+                if direction == .right && dragOffset >= SwipeConstants.completeThreshold {
+                    withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .easeOut(duration: 0.25)) {
+                        dragOffset = 500
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        onComplete()
+                    }
+                } else if direction == .left && abs(dragOffset) > SwipeConstants.directionLockThreshold {
+                    withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+                        dragOffset = -SwipeConstants.laneButtonRevealWidth
+                    }
+                } else {
+                    withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+                        dragOffset = 0
+                    }
+                }
+            }
+    }
+
+    // MARK: - Helpers
+
+    private func laneIcon(for lane: TaskLane) -> String {
+        switch lane {
+        case .now: "bolt.fill"
+        case .next: "arrow.right.circle.fill"
+        case .later: "tray.fill"
+        }
     }
 }
 
