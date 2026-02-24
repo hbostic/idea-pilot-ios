@@ -197,6 +197,24 @@ final class PlaybookHomeViewModel {
         }
     }
 
+    /// Moves a task one position up (lower index) within the current lane.
+    /// Used by VoiceOver accessibility actions.
+    func moveTaskUp(id: String) {
+        var ids = tasksInCurrentLane.map(\.id)
+        guard let index = ids.firstIndex(of: id), index > 0 else { return }
+        ids.swapAt(index, index - 1)
+        reorderTasks(ids: ids)
+    }
+
+    /// Moves a task one position down (higher index) within the current lane.
+    /// Used by VoiceOver accessibility actions.
+    func moveTaskDown(id: String) {
+        var ids = tasksInCurrentLane.map(\.id)
+        guard let index = ids.firstIndex(of: id), index < ids.count - 1 else { return }
+        ids.swapAt(index, index + 1)
+        reorderTasks(ids: ids)
+    }
+
     /// Selects a task for the detail half-sheet.
     func selectTask(_ task: TaskModel) {
         selectedTask = task
