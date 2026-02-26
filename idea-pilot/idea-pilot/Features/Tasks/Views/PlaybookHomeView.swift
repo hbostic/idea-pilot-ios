@@ -21,6 +21,10 @@ struct PlaybookHomeView: View {
 
     @Bindable var vm: PlaybookHomeViewModel
 
+    // MARK: - Navigation State
+
+    @State private var showSections = false
+
     // MARK: - Reorder State
 
     @State private var draggingTaskId: String? = nil
@@ -63,7 +67,7 @@ struct PlaybookHomeView: View {
                     }
 
                     Button {
-                        // Sections placeholder — Issue #25
+                        showSections = true
                     } label: {
                         Label("Sections", systemImage: "doc.text")
                     }
@@ -73,6 +77,12 @@ struct PlaybookHomeView: View {
                 }
                 .accessibilityLabel("More options")
             }
+        }
+        .navigationDestination(isPresented: $showSections) {
+            SectionsListView(vm: SectionsViewModel(
+                playbook: vm.playbook,
+                sectionService: vm.sectionService
+            ))
         }
         .sheet(item: $vm.selectedTask) { task in
             TaskDetailSheet(
