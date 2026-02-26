@@ -20,6 +20,7 @@ struct PlaybookListView: View {
 
     @Bindable var vm: PlaybookListViewModel
     let taskService: any TaskServiceProtocol
+    let sectionService: any SectionServiceProtocol
 
     var body: some View {
         ScrollView {
@@ -69,6 +70,7 @@ struct PlaybookListView: View {
                 PlaybookCardRow(
                     playbook: playbook,
                     taskService: taskService,
+                    sectionService: sectionService,
                     onArchive: { vm.archivePlaybook(id: playbook.id) }
                 )
             }
@@ -125,6 +127,7 @@ private struct PlaybookCardRow: View {
 
     let playbook: PlaybookModel
     let taskService: any TaskServiceProtocol
+    let sectionService: any SectionServiceProtocol
     let onArchive: () -> Void
 
     private var nowTaskCount: Int {
@@ -133,7 +136,7 @@ private struct PlaybookCardRow: View {
 
     var body: some View {
         NavigationLink {
-            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService))
+            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService, sectionService: sectionService))
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -407,7 +410,8 @@ private struct CreatePlaybookSheet: View {
                 ]
                 return vm
             }(),
-            taskService: PlaybookListPreviewTaskService()
+            taskService: PlaybookListPreviewTaskService(),
+            sectionService: PlaybookListPreviewSectionService()
         )
     }
 }
@@ -416,7 +420,8 @@ private struct CreatePlaybookSheet: View {
     NavigationStack {
         PlaybookListView(
             vm: PlaybookListViewModel(playbookService: PlaybookListPreviewPlaybookService()),
-            taskService: PlaybookListPreviewTaskService()
+            taskService: PlaybookListPreviewTaskService(),
+            sectionService: PlaybookListPreviewSectionService()
         )
     }
 }
@@ -429,7 +434,8 @@ private struct CreatePlaybookSheet: View {
                 vm.error = "Network error. Please check your connection."
                 return vm
             }(),
-            taskService: PlaybookListPreviewTaskService()
+            taskService: PlaybookListPreviewTaskService(),
+            sectionService: PlaybookListPreviewSectionService()
         )
     }
 }
@@ -441,6 +447,14 @@ private struct PlaybookListPreviewPlaybookService: PlaybookServiceProtocol {
         PlaybookModel(id: UUID().uuidString, title: title)
     }
     func archivePlaybook(id: String) async throws {}
+}
+
+/// A no-op section service for SwiftUI previews.
+private struct PlaybookListPreviewSectionService: SectionServiceProtocol {
+    func fetchSections(playbookId: String, updatedSince: Date?) async throws -> [SectionModel] { [] }
+    func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
+        SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
+    }
 }
 
 /// A no-op task service for SwiftUI previews.

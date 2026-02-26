@@ -65,4 +65,14 @@ enum SectionType: String, Codable, Hashable, CaseIterable, Sendable {
     case system = "SYSTEM"
     case build = "BUILD"
     case businessModel = "BUSINESS_MODEL"
+
+    /// Human-readable display name for the UI.
+    var displayName: String {
+        switch self {
+        case .vision: "Vision"
+        case .system: "System"
+        case .build: "Build"
+        case .businessModel: "Business Model"
+        }
+    }
 }

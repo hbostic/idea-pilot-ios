@@ -150,8 +150,12 @@ extension Endpoint {
 
 extension Endpoint {
 
-    static func getSections(playbookId: String) -> Endpoint {
-        Endpoint(path: "/v1/playbooks/\(playbookId)/sections", method: .get)
+    static func getSections(playbookId: String, updatedSince: Date? = nil) -> Endpoint {
+        var queryItems: [URLQueryItem]?
+        if let date = updatedSince {
+            queryItems = [URLQueryItem(name: "updated_since", value: ISO8601DateFormatter().string(from: date))]
+        }
+        return Endpoint(path: "/v1/playbooks/\(playbookId)/sections", method: .get, queryItems: queryItems)
     }
 
     static func updateSection(playbookId: String, sectionType: String, dto: UpdateSectionDTO) -> Endpoint {
