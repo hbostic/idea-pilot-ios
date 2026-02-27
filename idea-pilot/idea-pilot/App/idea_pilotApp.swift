@@ -26,9 +26,10 @@ struct idea_pilotApp: App {
     let taskService: TaskService
     let sectionService: SectionService
     let weeklyPlanService: WeeklyPlanService
+    let syncEngine: SyncEngine
 
     init() {
-        let container = try! ModelContainer(for: PlaybookModel.self)
+        let container = try! ModelContainer(for: PlaybookModel.self, MutationEntry.self)
         let tm = TokenManager(
             keychain: KeychainService(),
             baseURL: AppConfiguration.apiBaseURL
@@ -43,24 +44,36 @@ struct idea_pilotApp: App {
             modelContainer: container
         )
 
-        let playbooks = PlaybookService(apiClient: client, modelContainer: container)
-        let tasks = TaskService(apiClient: client, modelContainer: container)
-        let sections = SectionService(apiClient: client, modelContainer: container)
-        let weeklyPlan = WeeklyPlanService(apiClient: client, modelContainer: container)
+        let sync = SyncEngine(apiClient: client, modelContainer: container)
+
+        let playbooks = PlaybookService(apiClient: client, modelContainer: container, syncEngine: sync)
+        let tasks = TaskService(apiClient: client, modelContainer: container, syncEngine: sync)
+        let sections = SectionService(apiClient: client, modelContainer: container, syncEngine: sync)
+        let weeklyPlan = WeeklyPlanService(apiClient: client, modelContainer: container, syncEngine: sync)
 
         self.modelContainer = container
         self.tokenManager = tm
         self.apiClient = client
         self.authService = auth
+        self.syncEngine = sync
         self.playbookService = playbooks
         self.taskService = tasks
         self.sectionService = sections
         self.weeklyPlanService = weeklyPlan
+
+        sync.start()
     }
+
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
-            RootView(tokenManager: tokenManager, authService: authService, playbookService: playbookService, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService)
+            RootView(tokenManager: tokenManager, authService: authService, playbookService: playbookService, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService, syncEngine: syncEngine)
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        syncEngine.onAppForeground()
+                    }
+                }
         }
         .modelContainer(modelContainer)
     }

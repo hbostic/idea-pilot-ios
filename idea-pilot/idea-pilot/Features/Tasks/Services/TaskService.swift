@@ -60,15 +60,18 @@ final class TaskService: TaskServiceProtocol, Sendable {
 
     private let apiClient: APIClient
     private let modelContainer: ModelContainer
+    private let syncEngine: SyncEngine?
 
     /// Creates a TaskService.
     ///
     /// - Parameters:
     ///   - apiClient: The networking client for API calls.
     ///   - modelContainer: The SwiftData container for local persistence.
-    init(apiClient: APIClient, modelContainer: ModelContainer) {
+    ///   - syncEngine: Optional sync engine for offline mutation queueing.
+    init(apiClient: APIClient, modelContainer: ModelContainer, syncEngine: SyncEngine? = nil) {
         self.apiClient = apiClient
         self.modelContainer = modelContainer
+        self.syncEngine = syncEngine
     }
 
     func fetchTasks(playbookId: String, lane: TaskLane? = nil, updatedSince: Date? = nil) async throws -> [TaskModel] {
@@ -118,8 +121,22 @@ final class TaskService: TaskServiceProtocol, Sendable {
             let response: TaskDTO = try await apiClient.request(.createTask(dto: dto))
             // 3. On success: reconcile local model with server response.
             return try await reconcileCreatedTask(tempId: tempId, dto: response)
+        } catch let error as APIError where error.isOffline {
+            // 4a. Offline: keep optimistic insert, queue for later sync.
+            if let syncEngine {
+                await syncEngine.enqueue(
+                    path: "/v1/tasks",
+                    method: .post,
+                    body: dto,
+                    entityType: "task",
+                    entityId: tempId
+                )
+                return try await fetchLocalTask(id: tempId)
+            }
+            try await rollbackTask(tempId: tempId)
+            throw mapError(error)
         } catch {
-            // 4. On failure: rollback (delete the optimistic insert).
+            // 4b. Other failure: rollback (delete the optimistic insert).
             try await rollbackTask(tempId: tempId)
             if let apiError = error as? APIError {
                 throw mapError(apiError)
@@ -132,6 +149,19 @@ final class TaskService: TaskServiceProtocol, Sendable {
         do {
             let response: TaskDTO = try await apiClient.request(.updateTask(id: id, dto: dto))
             return try await upsertSingleTask(response)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                try await applyLocalTaskUpdate(id: id, dto: dto)
+                await syncEngine.enqueue(
+                    path: "/v1/tasks/\(id)",
+                    method: .patch,
+                    body: dto,
+                    entityType: "task",
+                    entityId: id
+                )
+                return try await fetchLocalTask(id: id)
+            }
+            throw mapError(error)
         } catch let error as APIError {
             throw mapError(error)
         } catch let error as TaskError {
@@ -149,6 +179,20 @@ final class TaskService: TaskServiceProtocol, Sendable {
             let response: TaskDTO = try await apiClient.request(.completeTask(id: id))
             // Reconcile with server response (server sets canonical completedAt).
             return try await upsertSingleTask(response)
+        } catch let error as APIError where error.isOffline {
+            // Offline: keep optimistic completion, queue for later sync.
+            if let syncEngine {
+                await syncEngine.enqueue(
+                    path: "/v1/tasks/\(id)/complete",
+                    method: .post,
+                    body: nil as CreateTaskDTO?,
+                    entityType: "task",
+                    entityId: id
+                )
+                return try await fetchLocalTask(id: id)
+            }
+            try await restoreTaskState(id: id, previousState: previousState)
+            throw mapError(error)
         } catch {
             // Rollback on failure.
             try await restoreTaskState(id: id, previousState: previousState)
@@ -164,6 +208,18 @@ final class TaskService: TaskServiceProtocol, Sendable {
         do {
             try await apiClient.requestVoid(.reorderTasks(dto: dto))
             try await updateLocalOrder(taskIds: taskIds)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                try await updateLocalOrder(taskIds: taskIds)
+                await syncEngine.enqueue(
+                    path: "/v1/tasks/reorder",
+                    method: .post,
+                    body: dto,
+                    entityType: "task"
+                )
+                return
+            }
+            throw mapError(error)
         } catch let error as APIError {
             throw mapError(error)
         } catch let error as TaskError {
@@ -177,6 +233,19 @@ final class TaskService: TaskServiceProtocol, Sendable {
         do {
             try await apiClient.requestVoid(.deleteTask(id: id))
             try await removeTask(id: id)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                try await removeTask(id: id)
+                await syncEngine.enqueue(
+                    path: "/v1/tasks/\(id)",
+                    method: .delete,
+                    body: nil as CreateTaskDTO?,
+                    entityType: "task",
+                    entityId: id
+                )
+                return
+            }
+            throw mapError(error)
         } catch let error as APIError {
             throw mapError(error)
         } catch let error as TaskError {
@@ -346,6 +415,36 @@ final class TaskService: TaskServiceProtocol, Sendable {
 
         guard let model = try context.fetch(descriptor).first else { return }
         context.delete(model)
+        try context.save()
+    }
+
+    /// Fetches a single task from SwiftData by ID.
+    @MainActor
+    private func fetchLocalTask(id: String) throws -> TaskModel {
+        let context = modelContainer.mainContext
+        let predicate = #Predicate<TaskModel> { $0.id == id }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let model = try context.fetch(descriptor).first else {
+            throw TaskError.notFound
+        }
+        return model
+    }
+
+    /// Applies an update DTO to a local task (for offline queueing).
+    @MainActor
+    private func applyLocalTaskUpdate(id: String, dto: UpdateTaskDTO) throws {
+        let context = modelContainer.mainContext
+        let predicate = #Predicate<TaskModel> { $0.id == id }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let model = try context.fetch(descriptor).first else { return }
+        if let title = dto.title { model.title = title }
+        if let detail = dto.detail { model.detail = detail }
+        if let lane = dto.lane { model.laneRawValue = lane }
+        if let minutes = dto.estimatedMinutes { model.estimatedMinutes = minutes }
+        if let status = dto.status { model.statusRawValue = status }
+        if let order = dto.orderIndex { model.orderIndex = order }
         try context.save()
     }
 

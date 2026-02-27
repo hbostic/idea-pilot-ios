@@ -46,15 +46,18 @@ final class SectionService: SectionServiceProtocol, Sendable {
 
     private let apiClient: APIClient
     private let modelContainer: ModelContainer
+    private let syncEngine: SyncEngine?
 
     /// Creates a SectionService.
     ///
     /// - Parameters:
     ///   - apiClient: The networking client for API calls.
     ///   - modelContainer: The SwiftData container for local persistence.
-    init(apiClient: APIClient, modelContainer: ModelContainer) {
+    ///   - syncEngine: Optional sync engine for offline mutation queueing.
+    init(apiClient: APIClient, modelContainer: ModelContainer, syncEngine: SyncEngine? = nil) {
         self.apiClient = apiClient
         self.modelContainer = modelContainer
+        self.syncEngine = syncEngine
     }
 
     func fetchSections(playbookId: String, updatedSince: Date? = nil) async throws -> [SectionModel] {
@@ -76,12 +79,25 @@ final class SectionService: SectionServiceProtocol, Sendable {
     }
 
     func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
+        let dto = UpdateSectionDTO(content: content)
         do {
-            let dto = UpdateSectionDTO(content: content)
             let response: SectionDTO = try await apiClient.request(
                 .updateSection(playbookId: playbookId, sectionType: sectionType.rawValue, dto: dto)
             )
             return try await upsertSingleSection(response)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                let model = try await applyLocalSectionUpdate(playbookId: playbookId, sectionType: sectionType, content: content)
+                await syncEngine.enqueue(
+                    path: "/v1/playbooks/\(playbookId)/sections/\(sectionType.rawValue)",
+                    method: .put,
+                    body: dto,
+                    entityType: "section",
+                    entityId: "\(playbookId)_\(sectionType.rawValue)"
+                )
+                return model
+            }
+            throw mapError(error)
         } catch let error as APIError {
             throw mapError(error)
         } catch let error as SectionError {
@@ -125,6 +141,28 @@ final class SectionService: SectionServiceProtocol, Sendable {
     @MainActor
     private func upsertSingleSection(_ dto: SectionDTO) throws -> SectionModel {
         try upsertSections([dto]).first!
+    }
+
+    /// Applies a section content update locally (for offline queueing).
+    @MainActor
+    @discardableResult
+    private func applyLocalSectionUpdate(playbookId: String, sectionType: SectionType, content: String) throws -> SectionModel {
+        let context = modelContainer.mainContext
+        let compositeId = "\(playbookId)_\(sectionType.rawValue)"
+        let predicate = #Predicate<SectionModel> { $0.compositeId == compositeId }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        if let existing = try context.fetch(descriptor).first {
+            existing.content = content
+            existing.updatedAt = .now
+            try context.save()
+            return existing
+        } else {
+            let model = SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
+            context.insert(model)
+            try context.save()
+            return model
+        }
     }
 
     /// Returns cached sections from SwiftData (offline fallback).
