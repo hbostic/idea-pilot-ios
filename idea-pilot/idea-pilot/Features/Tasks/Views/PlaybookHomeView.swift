@@ -24,6 +24,7 @@ struct PlaybookHomeView: View {
     // MARK: - Navigation State
 
     @State private var showSections = false
+    @State private var showWeeklyPlan = false
 
     // MARK: - Reorder State
 
@@ -61,7 +62,7 @@ struct PlaybookHomeView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        // Weekly Plan placeholder — Issue #28
+                        showWeeklyPlan = true
                     } label: {
                         Label("Weekly Plan", systemImage: "calendar")
                     }
@@ -97,6 +98,17 @@ struct PlaybookHomeView: View {
                         vm.allTasks.removeAll { $0.id == id }
                         vm.clearSelectedTask()
                     }
+                )
+            )
+        }
+        .fullScreenCover(isPresented: $showWeeklyPlan) {
+            vm.loadTasks()
+        } content: {
+            WeeklyPlanFlowView(
+                vm: WeeklyPlanViewModel(
+                    playbook: vm.playbook,
+                    taskService: vm.taskService,
+                    weeklyPlanService: vm.weeklyPlanService
                 )
             )
         }
