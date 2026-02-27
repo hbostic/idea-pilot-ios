@@ -78,6 +78,74 @@ final class APIClient: Sendable {
         try mapErrorStatus(statusCode, data: data)
     }
 
+    // MARK: - Mutation Replay
+
+    /// Replays a queued mutation with pre-encoded body data.
+    ///
+    /// Used by `SyncEngine` to drain the mutation queue. Body data was
+    /// pre-encoded at enqueue time (snake_case + ISO8601) so it is injected
+    /// directly without re-encoding.
+    ///
+    /// Includes full auth handling (token injection + 401 refresh-and-retry).
+    ///
+    /// - Parameters:
+    ///   - path: The endpoint path (e.g., `"/v1/tasks"`).
+    ///   - method: The HTTP method.
+    ///   - bodyData: Pre-encoded JSON body data, or `nil`.
+    ///   - requiresAuth: Whether to inject the Bearer token.
+    /// - Returns: The raw response `Data`.
+    /// - Throws: `APIError` on failure.
+    func replayMutation(
+        path: String,
+        method: HTTPMethod,
+        bodyData: Data?,
+        requiresAuth: Bool = true
+    ) async throws -> Data {
+        let endpoint = Endpoint(path: path, method: method, requiresAuth: requiresAuth)
+        var request = try await buildURLRequest(for: endpoint)
+
+        // Override body with pre-encoded data (already snake_case + ISO8601).
+        if let bodyData {
+            request.httpBody = bodyData
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+
+        let (data, response) = try await performRequest(request)
+
+        #if DEBUG
+        logRequest(request, statusCode: response.statusCode, data: data)
+        #endif
+
+        // Handle 401 with token refresh and retry.
+        if response.statusCode == 401 && requiresAuth {
+            guard let provider = tokenProvider else {
+                throw APIError.sessionExpired
+            }
+            do {
+                try await provider.refresh()
+            } catch {
+                await provider.clearTokens()
+                throw APIError.sessionExpired
+            }
+            var retryRequest = try await buildURLRequest(for: endpoint)
+            if let bodyData {
+                retryRequest.httpBody = bodyData
+                retryRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            }
+            let (retryData, retryResponse) = try await performRequest(retryRequest)
+
+            #if DEBUG
+            logRequest(retryRequest, statusCode: retryResponse.statusCode, data: retryData)
+            #endif
+
+            try mapErrorStatus(retryResponse.statusCode, data: retryData)
+            return retryData
+        }
+
+        try mapErrorStatus(response.statusCode, data: data)
+        return data
+    }
+
     // MARK: - Private
 
     private func buildURLRequest(for endpoint: Endpoint) async throws -> URLRequest {

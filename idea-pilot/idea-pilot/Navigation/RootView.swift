@@ -23,6 +23,7 @@ struct RootView: View {
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
     let weeklyPlanService: any WeeklyPlanServiceProtocol
+    let syncEngine: SyncEngine?
 
     @State private var isAuthenticated = false
     @State private var isCheckingAuth = true
@@ -89,6 +90,7 @@ struct RootView: View {
     }
 
     private func signOut() {
+        syncEngine?.stop()
         guard let vm = authViewModel else {
             // Create a fresh ViewModel for the auth screen.
             let newVM = AuthViewModel(authService: authService)

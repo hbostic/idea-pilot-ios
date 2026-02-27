@@ -49,15 +49,18 @@ final class WeeklyPlanService: WeeklyPlanServiceProtocol, Sendable {
 
     private let apiClient: APIClient
     private let modelContainer: ModelContainer
+    private let syncEngine: SyncEngine?
 
     /// Creates a WeeklyPlanService.
     ///
     /// - Parameters:
     ///   - apiClient: The networking client for API calls.
     ///   - modelContainer: The SwiftData container for local persistence.
-    init(apiClient: APIClient, modelContainer: ModelContainer) {
+    ///   - syncEngine: Optional sync engine for offline mutation queueing.
+    init(apiClient: APIClient, modelContainer: ModelContainer, syncEngine: SyncEngine? = nil) {
         self.apiClient = apiClient
         self.modelContainer = modelContainer
+        self.syncEngine = syncEngine
     }
 
     func getWeeklyStatus(playbookId: String) async throws -> WeeklyCycleModel {
@@ -76,12 +79,25 @@ final class WeeklyPlanService: WeeklyPlanServiceProtocol, Sendable {
     }
 
     func createWeeklyPlan(playbookId: String, taskIds: [String]) async throws -> WeeklyCycleModel {
+        let dto = CreateWeeklyPlanDTO(taskIds: taskIds)
         do {
-            let dto = CreateWeeklyPlanDTO(taskIds: taskIds)
             let response: WeeklyCycleDTO = try await apiClient.request(
                 .createWeeklyPlan(playbookId: playbookId, dto: dto)
             )
             return try await upsertSingleCycle(response)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                let tempModel = try await insertOptimisticCycle(playbookId: playbookId, taskCount: taskIds.count)
+                await syncEngine.enqueue(
+                    path: "/v1/playbooks/\(playbookId)/weekly/plan",
+                    method: .post,
+                    body: dto,
+                    entityType: "weeklyCycle",
+                    entityId: tempModel.id
+                )
+                return tempModel
+            }
+            throw mapError(error)
         } catch let error as APIError {
             throw mapError(error)
         } catch let error as WeeklyPlanError {
@@ -145,6 +161,20 @@ final class WeeklyPlanService: WeeklyPlanServiceProtocol, Sendable {
     @MainActor
     private func upsertSingleCycle(_ dto: WeeklyCycleDTO) throws -> WeeklyCycleModel {
         try upsertCycles([dto]).first!
+    }
+
+    /// Inserts an optimistic weekly cycle with a temp ID for offline creates.
+    @MainActor
+    private func insertOptimisticCycle(playbookId: String, taskCount: Int) throws -> WeeklyCycleModel {
+        let context = modelContainer.mainContext
+        let model = WeeklyCycleModel(
+            playbookId: playbookId,
+            weekStartDate: .now,
+            totalCount: taskCount
+        )
+        context.insert(model)
+        try context.save()
+        return model
     }
 
     /// Returns cached weekly cycles from SwiftData (offline fallback).

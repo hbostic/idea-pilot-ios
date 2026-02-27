@@ -51,15 +51,18 @@ final class PlaybookService: PlaybookServiceProtocol, Sendable {
 
     private let apiClient: APIClient
     private let modelContainer: ModelContainer
+    private let syncEngine: SyncEngine?
 
     /// Creates a PlaybookService.
     ///
     /// - Parameters:
     ///   - apiClient: The networking client for API calls.
     ///   - modelContainer: The SwiftData container for local persistence.
-    init(apiClient: APIClient, modelContainer: ModelContainer) {
+    ///   - syncEngine: Optional sync engine for offline mutation queueing.
+    init(apiClient: APIClient, modelContainer: ModelContainer, syncEngine: SyncEngine? = nil) {
         self.apiClient = apiClient
         self.modelContainer = modelContainer
+        self.syncEngine = syncEngine
     }
 
     func fetchPlaybooks(updatedSince: Date? = nil) async throws -> [PlaybookModel] {
@@ -80,14 +83,31 @@ final class PlaybookService: PlaybookServiceProtocol, Sendable {
 
     func createPlaybook(title: String, description: String?) async throws -> PlaybookModel {
         let dto = CreatePlaybookDTO(title: title, description: description, phase: PlaybookPhase.proof.rawValue)
+
+        // Insert optimistically so offline creates appear immediately.
+        let tempModel = try await insertOptimisticPlaybook(title: title, description: description)
+
         do {
             let response: PlaybookDTO = try await apiClient.request(.createPlaybook(dto: dto))
-            return try await insertPlaybook(response)
-        } catch let error as APIError {
+            return try await reconcileCreatedPlaybook(tempId: tempModel.id, dto: response)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                await syncEngine.enqueue(
+                    path: "/v1/playbooks",
+                    method: .post,
+                    body: dto,
+                    entityType: "playbook",
+                    entityId: tempModel.id
+                )
+                return tempModel
+            }
+            try await removePlaybook(id: tempModel.id)
             throw mapError(error)
-        } catch let error as PlaybookError {
-            throw error
         } catch {
+            try await removePlaybook(id: tempModel.id)
+            if let apiError = error as? APIError {
+                throw mapError(apiError)
+            }
             throw PlaybookError.serverError(error.localizedDescription)
         }
     }
@@ -96,6 +116,19 @@ final class PlaybookService: PlaybookServiceProtocol, Sendable {
         do {
             try await apiClient.requestVoid(.archivePlaybook(id: id))
             try await markArchived(id: id)
+        } catch let error as APIError where error.isOffline {
+            if let syncEngine {
+                try await markArchived(id: id)
+                await syncEngine.enqueue(
+                    path: "/v1/playbooks/\(id)/archive",
+                    method: .post,
+                    body: nil as CreatePlaybookDTO?,
+                    entityType: "playbook",
+                    entityId: id
+                )
+                return
+            }
+            throw mapError(error)
         } catch let error as APIError {
             throw mapError(error)
         } catch let error as PlaybookError {
@@ -146,6 +179,45 @@ final class PlaybookService: PlaybookServiceProtocol, Sendable {
         context.insert(model)
         try context.save()
         return model
+    }
+
+    /// Inserts an optimistic playbook with a temp ID for offline creates.
+    @MainActor
+    private func insertOptimisticPlaybook(title: String, description: String?) throws -> PlaybookModel {
+        let context = modelContainer.mainContext
+        let model = PlaybookModel(id: UUID().uuidString, title: title, descriptionText: description)
+        context.insert(model)
+        try context.save()
+        return model
+    }
+
+    /// Replaces the optimistic model with the server-truth model.
+    @MainActor
+    private func reconcileCreatedPlaybook(tempId: String, dto: PlaybookDTO) throws -> PlaybookModel {
+        let context = modelContainer.mainContext
+        let predicate = #Predicate<PlaybookModel> { $0.id == tempId }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        if let temp = try context.fetch(descriptor).first {
+            context.delete(temp)
+        }
+        let model = dto.toModel()
+        context.insert(model)
+        try context.save()
+        return model
+    }
+
+    /// Removes a playbook from SwiftData (rollback for failed optimistic creates).
+    @MainActor
+    private func removePlaybook(id: String) throws {
+        let context = modelContainer.mainContext
+        let predicate = #Predicate<PlaybookModel> { $0.id == id }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        if let model = try context.fetch(descriptor).first {
+            context.delete(model)
+            try context.save()
+        }
     }
 
     /// Marks a playbook as archived in SwiftData.
