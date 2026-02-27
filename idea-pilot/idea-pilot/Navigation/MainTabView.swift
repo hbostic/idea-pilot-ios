@@ -59,16 +59,18 @@ struct MainTabView: View {
     let taskService: any TaskServiceProtocol
     let playbookService: any PlaybookServiceProtocol
     let sectionService: any SectionServiceProtocol
+    let weeklyPlanService: any WeeklyPlanServiceProtocol
 
     @State private var selectedTab: AppTab = .now
     @State private var playbookListVM: PlaybookListViewModel
     @State private var showQuickAddSheet = false
 
-    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, onSignOut: @escaping () -> Void) {
+    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol, onSignOut: @escaping () -> Void) {
         self.onSignOut = onSignOut
         self.taskService = taskService
         self.playbookService = playbookService
         self.sectionService = sectionService
+        self.weeklyPlanService = weeklyPlanService
         self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
     }
 
@@ -105,7 +107,7 @@ struct MainTabView: View {
             .opacity(selectedTab == .now ? 1 : 0)
 
             NavigationStack {
-                PlaybookListView(vm: playbookListVM, taskService: taskService, sectionService: sectionService)
+                PlaybookListView(vm: playbookListVM, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService)
             }
             .opacity(selectedTab == .playbooks ? 1 : 0)
         }
@@ -223,6 +225,7 @@ private struct NowPlaceholderView: View {
         playbookService: MainTabPreviewPlaybookService(),
         taskService: MainTabPreviewTaskService(),
         sectionService: MainTabPreviewSectionService(),
+        weeklyPlanService: MainTabPreviewWeeklyPlanService(),
         onSignOut: {}
     )
 }
@@ -242,6 +245,17 @@ private struct MainTabPreviewSectionService: SectionServiceProtocol {
     func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
         SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
     }
+}
+
+/// A no-op weekly plan service for MainTabView previews.
+private struct MainTabPreviewWeeklyPlanService: WeeklyPlanServiceProtocol {
+    func getWeeklyStatus(playbookId: String) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now)
+    }
+    func createWeeklyPlan(playbookId: String, taskIds: [String]) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now, totalCount: taskIds.count)
+    }
+    func fetchWeeklyCycles(playbookId: String) async throws -> [WeeklyCycleModel] { [] }
 }
 
 /// A no-op task service for MainTabView previews.

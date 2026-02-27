@@ -170,4 +170,12 @@ extension Endpoint {
     static func getWeeklyCycles(playbookId: String) -> Endpoint {
         Endpoint(path: "/v1/playbooks/\(playbookId)/weekly-cycles", method: .get)
     }
+
+    static func getWeeklyStatus(playbookId: String) -> Endpoint {
+        Endpoint(path: "/v1/playbooks/\(playbookId)/weekly/status", method: .get)
+    }
+
+    static func createWeeklyPlan(playbookId: String, dto: CreateWeeklyPlanDTO) -> Endpoint {
+        Endpoint(path: "/v1/playbooks/\(playbookId)/weekly/plan", method: .post, body: dto)
+    }
 }

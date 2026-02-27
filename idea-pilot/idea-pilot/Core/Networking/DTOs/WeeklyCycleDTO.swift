@@ -18,6 +18,11 @@ nonisolated struct WeeklyCycleDTO: Codable, Sendable {
     let updatedAt: Date
 }
 
+/// Request body for creating a weekly plan.
+nonisolated struct CreateWeeklyPlanDTO: Codable, Sendable {
+    let taskIds: [String]
+}
+
 // MARK: - Mapping
 
 extension WeeklyCycleDTO {

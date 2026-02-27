@@ -73,6 +73,7 @@ final class PlaybookHomeViewModel {
 
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
+    let weeklyPlanService: any WeeklyPlanServiceProtocol
 
     // MARK: - Init
 
@@ -82,10 +83,12 @@ final class PlaybookHomeViewModel {
     ///   - playbook: The playbook whose tasks are managed.
     ///   - taskService: The service for task API calls and persistence.
     ///   - sectionService: The service for section API calls and persistence.
-    init(playbook: PlaybookModel, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol) {
+    ///   - weeklyPlanService: The service for weekly plan API calls and persistence.
+    init(playbook: PlaybookModel, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol) {
         self.playbook = playbook
         self.taskService = taskService
         self.sectionService = sectionService
+        self.weeklyPlanService = weeklyPlanService
     }
 
     // MARK: - Actions

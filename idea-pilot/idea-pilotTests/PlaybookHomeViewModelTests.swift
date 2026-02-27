@@ -94,6 +94,19 @@ private final class StubSectionService: SectionServiceProtocol, @unchecked Senda
     }
 }
 
+// MARK: - Stub Weekly Plan Service
+
+/// Minimal stub for WeeklyPlanServiceProtocol used when tests don't exercise weekly plan logic.
+private final class StubWeeklyPlanService: WeeklyPlanServiceProtocol, @unchecked Sendable {
+    nonisolated func getWeeklyStatus(playbookId: String) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now)
+    }
+    nonisolated func createWeeklyPlan(playbookId: String, taskIds: [String]) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now, totalCount: taskIds.count)
+    }
+    nonisolated func fetchWeeklyCycles(playbookId: String) async throws -> [WeeklyCycleModel] { [] }
+}
+
 // MARK: - Test Helpers
 
 private func makeSamplePlaybook() -> PlaybookModel {
@@ -127,7 +140,7 @@ struct PlaybookHomeViewModelTests {
     @MainActor func loadTasksSuccess() async throws {
         let mockService = MockTaskService()
         mockService.fetchResult = .success(makeSampleTasks())
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
 
         vm.loadTasks()
         try await Task.sleep(for: .milliseconds(50))
@@ -142,7 +155,7 @@ struct PlaybookHomeViewModelTests {
     @MainActor func loadTasksError() async throws {
         let mockService = MockTaskService()
         mockService.fetchResult = .failure(.networkError("timeout"))
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
 
         vm.loadTasks()
         try await Task.sleep(for: .milliseconds(50))
@@ -158,7 +171,7 @@ struct PlaybookHomeViewModelTests {
     @MainActor func refreshCallsFetch() async throws {
         let mockService = MockTaskService()
         mockService.fetchResult = .success(makeSampleTasks())
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
 
         await vm.refresh()
 
@@ -172,7 +185,7 @@ struct PlaybookHomeViewModelTests {
     @Test("tasksInCurrentLane returns only NOW tasks by default")
     @MainActor func laneFilteringNow() {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         let nowTasks = vm.tasksInCurrentLane
@@ -183,7 +196,7 @@ struct PlaybookHomeViewModelTests {
     @Test("selectLane switches to NEXT and filters correctly")
     @MainActor func laneFilteringNext() {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         vm.selectLane(.next)
@@ -196,7 +209,7 @@ struct PlaybookHomeViewModelTests {
     @Test("tasksInCurrentLane excludes completed tasks")
     @MainActor func laneFilteringHidesDone() {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeMixedStatusTasks()
 
         let tasks = vm.tasksInCurrentLane
@@ -207,7 +220,7 @@ struct PlaybookHomeViewModelTests {
     @Test("taskCounts returns correct counts per lane")
     @MainActor func taskCountsPerLane() {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         let counts = vm.taskCounts
@@ -224,7 +237,7 @@ struct PlaybookHomeViewModelTests {
         let completedTask = TaskModel(id: "t-1", playbookId: "pb-1", title: "Now Task 1", lane: .now, status: .done, completedAt: .now)
         mockService.completeResult = .success(completedTask)
 
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         vm.completeTask(id: "t-1")
@@ -241,7 +254,7 @@ struct PlaybookHomeViewModelTests {
         let mockService = MockTaskService()
         mockService.completeResult = .failure(.serverError("Server error"))
 
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         vm.completeTask(id: "t-1")
@@ -258,7 +271,7 @@ struct PlaybookHomeViewModelTests {
         let movedTask = TaskModel(id: "t-1", playbookId: "pb-1", title: "Now Task 1", lane: .next, orderIndex: 0)
         mockService.updateResult = .success(movedTask)
 
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         vm.moveTask(id: "t-1", toLane: .next)
@@ -276,7 +289,7 @@ struct PlaybookHomeViewModelTests {
     @Test("reorderTasks updates local orderIndex and calls service")
     @MainActor func reorderTasksSuccess() async throws {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         vm.allTasks = makeSampleTasks()
 
         // Reverse the order of NOW tasks.
@@ -299,7 +312,7 @@ struct PlaybookHomeViewModelTests {
     @Test("emptyStateMessage returns correct message per lane")
     @MainActor func emptyStateMessages() {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
 
         vm.selectLane(.now)
         #expect(vm.emptyStateMessage == "No active tasks. Move a task to Now to get started.")
@@ -316,7 +329,7 @@ struct PlaybookHomeViewModelTests {
     @Test("selectTask and clearSelectedTask manage detail sheet state")
     @MainActor func selectAndClearTask() {
         let mockService = MockTaskService()
-        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService())
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
         let task = TaskModel(playbookId: "pb-1", title: "Test Task")
 
         vm.selectTask(task)
