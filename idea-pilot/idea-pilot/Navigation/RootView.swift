@@ -22,6 +22,7 @@ struct RootView: View {
     let playbookService: any PlaybookServiceProtocol
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
+    let weeklyPlanService: any WeeklyPlanServiceProtocol
 
     @State private var isAuthenticated = false
     @State private var isCheckingAuth = true
@@ -32,7 +33,7 @@ struct RootView: View {
             if isCheckingAuth {
                 splashView
             } else if isAuthenticated {
-                MainTabView(playbookService: playbookService, taskService: taskService, sectionService: sectionService, onSignOut: signOut)
+                MainTabView(playbookService: playbookService, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService, onSignOut: signOut)
             } else if let vm = authViewModel {
                 AuthView(vm: vm)
             }

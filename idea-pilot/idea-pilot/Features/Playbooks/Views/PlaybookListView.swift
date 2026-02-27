@@ -21,6 +21,7 @@ struct PlaybookListView: View {
     @Bindable var vm: PlaybookListViewModel
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
+    let weeklyPlanService: any WeeklyPlanServiceProtocol
 
     var body: some View {
         ScrollView {
@@ -71,6 +72,7 @@ struct PlaybookListView: View {
                     playbook: playbook,
                     taskService: taskService,
                     sectionService: sectionService,
+                    weeklyPlanService: weeklyPlanService,
                     onArchive: { vm.archivePlaybook(id: playbook.id) }
                 )
             }
@@ -128,6 +130,7 @@ private struct PlaybookCardRow: View {
     let playbook: PlaybookModel
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
+    let weeklyPlanService: any WeeklyPlanServiceProtocol
     let onArchive: () -> Void
 
     private var nowTaskCount: Int {
@@ -136,7 +139,7 @@ private struct PlaybookCardRow: View {
 
     var body: some View {
         NavigationLink {
-            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService, sectionService: sectionService))
+            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService))
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -411,7 +414,8 @@ private struct CreatePlaybookSheet: View {
                 return vm
             }(),
             taskService: PlaybookListPreviewTaskService(),
-            sectionService: PlaybookListPreviewSectionService()
+            sectionService: PlaybookListPreviewSectionService(),
+            weeklyPlanService: PlaybookListPreviewWeeklyPlanService()
         )
     }
 }
@@ -421,7 +425,8 @@ private struct CreatePlaybookSheet: View {
         PlaybookListView(
             vm: PlaybookListViewModel(playbookService: PlaybookListPreviewPlaybookService()),
             taskService: PlaybookListPreviewTaskService(),
-            sectionService: PlaybookListPreviewSectionService()
+            sectionService: PlaybookListPreviewSectionService(),
+            weeklyPlanService: PlaybookListPreviewWeeklyPlanService()
         )
     }
 }
@@ -435,7 +440,8 @@ private struct CreatePlaybookSheet: View {
                 return vm
             }(),
             taskService: PlaybookListPreviewTaskService(),
-            sectionService: PlaybookListPreviewSectionService()
+            sectionService: PlaybookListPreviewSectionService(),
+            weeklyPlanService: PlaybookListPreviewWeeklyPlanService()
         )
     }
 }
@@ -455,6 +461,17 @@ private struct PlaybookListPreviewSectionService: SectionServiceProtocol {
     func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
         SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
     }
+}
+
+/// A no-op weekly plan service for SwiftUI previews.
+private struct PlaybookListPreviewWeeklyPlanService: WeeklyPlanServiceProtocol {
+    func getWeeklyStatus(playbookId: String) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now)
+    }
+    func createWeeklyPlan(playbookId: String, taskIds: [String]) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now, totalCount: taskIds.count)
+    }
+    func fetchWeeklyCycles(playbookId: String) async throws -> [WeeklyCycleModel] { [] }
 }
 
 /// A no-op task service for SwiftUI previews.

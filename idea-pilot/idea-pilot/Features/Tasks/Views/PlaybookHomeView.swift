@@ -662,7 +662,8 @@ private struct EmptyLaneView: View {
             let vm = PlaybookHomeViewModel(
                 playbook: PlaybookModel(id: "pb-1", title: "Side Hustle App", phase: .proof),
                 taskService: PreviewTaskService(),
-                sectionService: PreviewSectionService()
+                sectionService: PreviewSectionService(),
+                weeklyPlanService: PreviewWeeklyPlanService()
             )
             vm.allTasks = [
                 TaskModel(id: "t-1", playbookId: "pb-1", title: "Research competitors", lane: .now, estimatedMinutes: 90, orderIndex: 0),
@@ -680,7 +681,8 @@ private struct EmptyLaneView: View {
         PlaybookHomeView(vm: PlaybookHomeViewModel(
             playbook: PlaybookModel(id: "pb-1", title: "Empty Playbook"),
             taskService: PreviewTaskService(),
-            sectionService: PreviewSectionService()
+            sectionService: PreviewSectionService(),
+            weeklyPlanService: PreviewWeeklyPlanService()
         ))
     }
 }
@@ -691,6 +693,17 @@ private struct PreviewSectionService: SectionServiceProtocol {
     func updateSection(playbookId: String, sectionType: SectionType, content: String) async throws -> SectionModel {
         SectionModel(playbookId: playbookId, sectionType: sectionType, content: content)
     }
+}
+
+/// A no-op weekly plan service for SwiftUI previews.
+private struct PreviewWeeklyPlanService: WeeklyPlanServiceProtocol {
+    func getWeeklyStatus(playbookId: String) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now)
+    }
+    func createWeeklyPlan(playbookId: String, taskIds: [String]) async throws -> WeeklyCycleModel {
+        WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now, totalCount: taskIds.count)
+    }
+    func fetchWeeklyCycles(playbookId: String) async throws -> [WeeklyCycleModel] { [] }
 }
 
 /// A no-op task service for SwiftUI previews.
