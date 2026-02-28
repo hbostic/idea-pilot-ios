@@ -83,6 +83,20 @@ final class PlaybookHomeViewModel {
         return nil
     }
 
+    /// Returns the sync state for a specific task, or `nil` if fully synced.
+    ///
+    /// Reads from `SyncEngine.mutationQueue.entityStates`, which is
+    /// `@Observable`. SwiftUI views that call this will automatically
+    /// re-render when the dictionary changes.
+    func taskSyncState(for taskId: String) -> EntitySyncState? {
+        syncEngine?.mutationQueue.entityStates[taskId]
+    }
+
+    /// Retries syncing a specific failed task by triggering a queue drain.
+    func retryTaskSync(for taskId: String) {
+        syncEngine?.triggerDrain()
+    }
+
     // MARK: - Dependencies
 
     let taskService: any TaskServiceProtocol

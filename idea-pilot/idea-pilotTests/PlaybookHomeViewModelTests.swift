@@ -380,6 +380,35 @@ struct PlaybookHomeViewModelTests {
         engine.status.value = .synced
         #expect(vm.syncErrorMessage == nil)
     }
+
+    // MARK: - Per-Item Sync State
+
+    @Test("taskSyncState returns nil when no sync engine")
+    @MainActor func taskSyncStateWithoutEngine() {
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+        #expect(vm.taskSyncState(for: "t-1") == nil)
+    }
+
+    @Test("taskSyncState returns state from mutation queue entityStates")
+    @MainActor func taskSyncStateFromQueue() throws {
+        let engine = try makeSyncEngineForHomeTests()
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService(), syncEngine: engine)
+
+        engine.mutationQueue.entityStates["t-1"] = .pending
+
+        #expect(vm.taskSyncState(for: "t-1") == .pending)
+        #expect(vm.taskSyncState(for: "t-2") == nil)
+    }
+
+    @Test("taskSyncState returns .failed state from mutation queue")
+    @MainActor func taskSyncStateReturnsFailed() throws {
+        let engine = try makeSyncEngineForHomeTests()
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService(), syncEngine: engine)
+
+        engine.mutationQueue.entityStates["t-1"] = .failed(retryCount: 2)
+
+        #expect(vm.taskSyncState(for: "t-1") == .failed(retryCount: 2))
+    }
 }
 
 // MARK: - Sync Engine Helper
