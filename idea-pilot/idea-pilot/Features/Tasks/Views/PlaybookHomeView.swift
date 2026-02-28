@@ -25,6 +25,7 @@ struct PlaybookHomeView: View {
 
     @State private var showSections = false
     @State private var showWeeklyPlan = false
+    @State private var showSyncError = false
 
     // MARK: - Reorder State
 
@@ -59,6 +60,10 @@ struct PlaybookHomeView: View {
         .navigationTitle(vm.playbook.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                syncIndicator
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
@@ -78,6 +83,12 @@ struct PlaybookHomeView: View {
                 }
                 .accessibilityLabel("More options")
             }
+        }
+        .alert("Sync Error", isPresented: $showSyncError) {
+            Button("Retry") { vm.retrySync() }
+            Button("Dismiss", role: .cancel) {}
+        } message: {
+            Text(vm.syncErrorMessage ?? "An error occurred while syncing.")
         }
         .navigationDestination(isPresented: $showSections) {
             SectionsListView(vm: SectionsViewModel(
@@ -283,6 +294,21 @@ struct PlaybookHomeView: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Error: \(message)")
+    }
+
+    // MARK: - Sync Indicator
+
+    @ViewBuilder
+    private var syncIndicator: some View {
+        let dot = SyncStatusDotView(status: vm.syncStatusValue)
+            .accessibilityLabel("Sync status: \(SyncStatusDotView(status: vm.syncStatusValue).statusLabel)")
+
+        if case .error = vm.syncStatusValue {
+            Button { showSyncError = true } label: { dot }
+                .accessibilityHint("Tap to see error details and retry")
+        } else {
+            dot
+        }
     }
 }
 

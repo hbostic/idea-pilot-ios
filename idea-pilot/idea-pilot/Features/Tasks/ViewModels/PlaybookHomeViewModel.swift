@@ -69,11 +69,26 @@ final class PlaybookHomeViewModel {
         }
     }
 
+    // MARK: - Sync
+
+    /// The current sync status, derived from the SyncEngine.
+    /// Defaults to `.synced` when no engine is available.
+    var syncStatusValue: SyncStatusValue {
+        syncEngine?.status.value ?? .synced
+    }
+
+    /// The error message from the sync engine when status is `.error`.
+    var syncErrorMessage: String? {
+        if case .error(let message) = syncStatusValue { return message }
+        return nil
+    }
+
     // MARK: - Dependencies
 
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
     let weeklyPlanService: any WeeklyPlanServiceProtocol
+    let syncEngine: SyncEngine?
 
     // MARK: - Init
 
@@ -84,11 +99,13 @@ final class PlaybookHomeViewModel {
     ///   - taskService: The service for task API calls and persistence.
     ///   - sectionService: The service for section API calls and persistence.
     ///   - weeklyPlanService: The service for weekly plan API calls and persistence.
-    init(playbook: PlaybookModel, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol) {
+    ///   - syncEngine: The sync engine for displaying sync status. Pass `nil` when unavailable.
+    init(playbook: PlaybookModel, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol, syncEngine: SyncEngine? = nil) {
         self.playbook = playbook
         self.taskService = taskService
         self.sectionService = sectionService
         self.weeklyPlanService = weeklyPlanService
+        self.syncEngine = syncEngine
     }
 
     // MARK: - Actions
@@ -229,6 +246,11 @@ final class PlaybookHomeViewModel {
     /// Clears the selected task, dismissing the detail sheet.
     func clearSelectedTask() {
         selectedTask = nil
+    }
+
+    /// Retries sync when the user taps the error indicator.
+    func retrySync() {
+        Task { await syncEngine?.onPullToRefresh() }
     }
 
     // MARK: - Private
