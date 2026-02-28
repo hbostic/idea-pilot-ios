@@ -35,6 +35,10 @@ struct PlaybookHomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                if let monitor = vm.syncEngine?.networkMonitor {
+                    OfflineBannerView(networkMonitor: monitor)
+                }
+
                 LaneSegmentedControl(
                     selectedLane: vm.selectedLane,
                     counts: vm.taskCounts,
@@ -42,7 +46,7 @@ struct PlaybookHomeView: View {
                 )
 
                 if let error = vm.error {
-                    errorBanner(error)
+                    ErrorBannerView(message: error)
                 }
 
                 laneContent
@@ -130,7 +134,7 @@ struct PlaybookHomeView: View {
     @ViewBuilder
     private var laneContent: some View {
         if vm.isLoading && vm.allTasks.isEmpty {
-            loadingView
+            SkeletonList(rowCount: 3)
         } else if vm.isEmpty {
             EmptyLaneView(lane: vm.selectedLane, message: vm.emptyStateMessage)
         } else {
@@ -255,45 +259,6 @@ struct PlaybookHomeView: View {
         }
 
         return 0
-    }
-
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-                .frame(height: 120)
-
-            ProgressView()
-                .tint(Color.theme.mutedForeground)
-
-            Text("Loading tasks…")
-                .font(.theme.subheadline)
-                .foregroundStyle(Color.theme.mutedForeground)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.subheadline)
-            Text(message)
-                .font(.theme.subheadline)
-        }
-        .foregroundStyle(Color.theme.destructive)
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.theme.destructive.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
-        .overlay(
-            RoundedRectangle(cornerRadius: .theme.radiusMd)
-                .stroke(Color.theme.destructive.opacity(0.3), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Error: \(message)")
     }
 
     // MARK: - Sync Indicator

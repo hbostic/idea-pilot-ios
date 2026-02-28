@@ -20,11 +20,11 @@ struct SectionsListView: View {
         ScrollView {
             VStack(spacing: 12) {
                 if let error = vm.error {
-                    errorBanner(error)
+                    ErrorBannerView(message: error)
                 }
 
                 if vm.isLoading && vm.sections.isEmpty {
-                    loadingView
+                    SkeletonList(rowCount: 4, rowHeight: 64)
                 } else {
                     sectionsList
                 }
@@ -57,43 +57,6 @@ struct SectionsListView: View {
         }
     }
 
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            Spacer().frame(height: 120)
-
-            ProgressView()
-                .tint(Color.theme.mutedForeground)
-
-            Text("Loading sections...")
-                .font(.theme.subheadline)
-                .foregroundStyle(Color.theme.mutedForeground)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.subheadline)
-            Text(message)
-                .font(.theme.subheadline)
-        }
-        .foregroundStyle(Color.theme.destructive)
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.theme.destructive.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
-        .overlay(
-            RoundedRectangle(cornerRadius: .theme.radiusMd)
-                .stroke(Color.theme.destructive.opacity(0.3), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Error: \(message)")
-    }
 }
 
 // MARK: - Section Row
