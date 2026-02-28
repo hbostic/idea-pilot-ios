@@ -54,6 +54,9 @@ final class SyncEngine: @unchecked Sendable {
 
     // MARK: - Internal State
 
+    /// Timestamp of the last successful sync drain.
+    var lastSyncDate: Date?
+
     private var isDraining = false
     private var debounceTask: Task<Void, Never>?
 
@@ -266,6 +269,9 @@ final class SyncEngine: @unchecked Sendable {
 
         isDraining = false
         updateStatus()
+        if case .synced = status.value {
+            lastSyncDate = .now
+        }
     }
 
     // MARK: - Create Reconciliation
