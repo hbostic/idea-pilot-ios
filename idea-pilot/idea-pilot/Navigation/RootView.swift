@@ -34,7 +34,7 @@ struct RootView: View {
             if isCheckingAuth {
                 splashView
             } else if isAuthenticated {
-                MainTabView(playbookService: playbookService, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService, onSignOut: signOut)
+                MainTabView(playbookService: playbookService, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService, tokenManager: tokenManager, authService: authService, syncEngine: syncEngine, onSignOut: signOut)
             } else if let vm = authViewModel {
                 AuthView(vm: vm)
             }

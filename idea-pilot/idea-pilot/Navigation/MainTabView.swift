@@ -60,17 +60,23 @@ struct MainTabView: View {
     let playbookService: any PlaybookServiceProtocol
     let sectionService: any SectionServiceProtocol
     let weeklyPlanService: any WeeklyPlanServiceProtocol
+    let tokenManager: TokenManager
+    let authService: any AuthServiceProtocol
+    let syncEngine: SyncEngine?
 
     @State private var selectedTab: AppTab = .now
     @State private var playbookListVM: PlaybookListViewModel
     @State private var showQuickAddSheet = false
 
-    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol, onSignOut: @escaping () -> Void) {
+    init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol, tokenManager: TokenManager, authService: any AuthServiceProtocol, syncEngine: SyncEngine?, onSignOut: @escaping () -> Void) {
         self.onSignOut = onSignOut
         self.taskService = taskService
         self.playbookService = playbookService
         self.sectionService = sectionService
         self.weeklyPlanService = weeklyPlanService
+        self.tokenManager = tokenManager
+        self.authService = authService
+        self.syncEngine = syncEngine
         self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
     }
 
@@ -107,7 +113,7 @@ struct MainTabView: View {
             .opacity(selectedTab == .now ? 1 : 0)
 
             NavigationStack {
-                PlaybookListView(vm: playbookListVM, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService)
+                PlaybookListView(vm: playbookListVM, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService, tokenManager: tokenManager, authService: authService, syncEngine: syncEngine, onSignOut: onSignOut)
             }
             .opacity(selectedTab == .playbooks ? 1 : 0)
         }
@@ -226,8 +232,25 @@ private struct NowPlaceholderView: View {
         taskService: MainTabPreviewTaskService(),
         sectionService: MainTabPreviewSectionService(),
         weeklyPlanService: MainTabPreviewWeeklyPlanService(),
+        tokenManager: TokenManager(baseURL: URL(string: "https://api.test.ideapilot.app")!),
+        authService: MainTabPreviewAuthService(),
+        syncEngine: nil,
         onSignOut: {}
     )
+}
+
+/// A no-op auth service for MainTabView previews.
+private struct MainTabPreviewAuthService: AuthServiceProtocol {
+    func login(email: String, password: String) async throws -> UserSession {
+        UserSession(userId: "1", email: email, accessToken: "t", refreshToken: "r")
+    }
+    func register(email: String, password: String) async throws -> UserSession {
+        UserSession(userId: "1", email: email, accessToken: "t", refreshToken: "r")
+    }
+    func auth0Login(idToken: String) async throws -> UserSession {
+        UserSession(userId: "1", email: "test@test.com", accessToken: "t", refreshToken: "r")
+    }
+    func logout() async throws {}
 }
 
 /// A no-op playbook service for MainTabView previews.

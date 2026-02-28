@@ -22,6 +22,12 @@ struct PlaybookListView: View {
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
     let weeklyPlanService: any WeeklyPlanServiceProtocol
+    let tokenManager: TokenManager
+    let authService: any AuthServiceProtocol
+    let syncEngine: SyncEngine?
+    let onSignOut: () -> Void
+
+    @State private var showSettings = false
 
     var body: some View {
         ScrollView {
@@ -50,7 +56,7 @@ struct PlaybookListView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    // Settings placeholder — future issue
+                    showSettings = true
                 } label: {
                     Image(systemName: "gearshape")
                         .foregroundStyle(Color.theme.mutedForeground)
@@ -60,6 +66,16 @@ struct PlaybookListView: View {
         }
         .sheet(isPresented: $vm.showCreateSheet) {
             CreatePlaybookSheet(vm: vm)
+        }
+        .fullScreenCover(isPresented: $showSettings) {
+            SettingsView(
+                vm: SettingsViewModel(
+                    tokenManager: tokenManager,
+                    authService: authService,
+                    syncEngine: syncEngine,
+                    onSignOut: onSignOut
+                )
+            )
         }
     }
 
@@ -400,6 +416,8 @@ private struct CreatePlaybookSheet: View {
 
 // MARK: - Preview
 
+private let previewTokenManager = TokenManager(baseURL: URL(string: "https://api.test.ideapilot.app")!)
+
 #Preview("Populated") {
     NavigationStack {
         PlaybookListView(
@@ -415,7 +433,11 @@ private struct CreatePlaybookSheet: View {
             }(),
             taskService: PlaybookListPreviewTaskService(),
             sectionService: PlaybookListPreviewSectionService(),
-            weeklyPlanService: PlaybookListPreviewWeeklyPlanService()
+            weeklyPlanService: PlaybookListPreviewWeeklyPlanService(),
+            tokenManager: previewTokenManager,
+            authService: PlaybookListPreviewAuthService(),
+            syncEngine: nil,
+            onSignOut: {}
         )
     }
 }
@@ -426,7 +448,11 @@ private struct CreatePlaybookSheet: View {
             vm: PlaybookListViewModel(playbookService: PlaybookListPreviewPlaybookService()),
             taskService: PlaybookListPreviewTaskService(),
             sectionService: PlaybookListPreviewSectionService(),
-            weeklyPlanService: PlaybookListPreviewWeeklyPlanService()
+            weeklyPlanService: PlaybookListPreviewWeeklyPlanService(),
+            tokenManager: previewTokenManager,
+            authService: PlaybookListPreviewAuthService(),
+            syncEngine: nil,
+            onSignOut: {}
         )
     }
 }
@@ -441,7 +467,11 @@ private struct CreatePlaybookSheet: View {
             }(),
             taskService: PlaybookListPreviewTaskService(),
             sectionService: PlaybookListPreviewSectionService(),
-            weeklyPlanService: PlaybookListPreviewWeeklyPlanService()
+            weeklyPlanService: PlaybookListPreviewWeeklyPlanService(),
+            tokenManager: previewTokenManager,
+            authService: PlaybookListPreviewAuthService(),
+            syncEngine: nil,
+            onSignOut: {}
         )
     }
 }
@@ -472,6 +502,20 @@ private struct PlaybookListPreviewWeeklyPlanService: WeeklyPlanServiceProtocol {
         WeeklyCycleModel(playbookId: playbookId, weekStartDate: .now, totalCount: taskIds.count)
     }
     func fetchWeeklyCycles(playbookId: String) async throws -> [WeeklyCycleModel] { [] }
+}
+
+/// A no-op auth service for SwiftUI previews.
+private struct PlaybookListPreviewAuthService: AuthServiceProtocol {
+    func login(email: String, password: String) async throws -> UserSession {
+        UserSession(userId: "1", email: email, accessToken: "t", refreshToken: "r")
+    }
+    func register(email: String, password: String) async throws -> UserSession {
+        UserSession(userId: "1", email: email, accessToken: "t", refreshToken: "r")
+    }
+    func auth0Login(idToken: String) async throws -> UserSession {
+        UserSession(userId: "1", email: "test@test.com", accessToken: "t", refreshToken: "r")
+    }
+    func logout() async throws {}
 }
 
 /// A no-op task service for SwiftUI previews.
