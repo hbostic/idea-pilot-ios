@@ -89,6 +89,7 @@ struct PlaybookListView: View {
                     taskService: taskService,
                     sectionService: sectionService,
                     weeklyPlanService: weeklyPlanService,
+                    syncEngine: syncEngine,
                     onArchive: { vm.archivePlaybook(id: playbook.id) }
                 )
             }
@@ -147,6 +148,7 @@ private struct PlaybookCardRow: View {
     let taskService: any TaskServiceProtocol
     let sectionService: any SectionServiceProtocol
     let weeklyPlanService: any WeeklyPlanServiceProtocol
+    let syncEngine: SyncEngine?
     let onArchive: () -> Void
 
     private var nowTaskCount: Int {
@@ -155,7 +157,7 @@ private struct PlaybookCardRow: View {
 
     var body: some View {
         NavigationLink {
-            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService))
+            PlaybookHomeView(vm: PlaybookHomeViewModel(playbook: playbook, taskService: taskService, sectionService: sectionService, weeklyPlanService: weeklyPlanService, syncEngine: syncEngine))
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {

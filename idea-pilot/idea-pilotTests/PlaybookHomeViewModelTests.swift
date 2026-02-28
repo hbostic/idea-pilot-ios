@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 import Testing
 @testable import idea_pilot
 
@@ -338,4 +339,59 @@ struct PlaybookHomeViewModelTests {
         vm.clearSelectedTask()
         #expect(vm.selectedTask == nil)
     }
+
+    // MARK: - Sync Status
+
+    @Test("syncStatusValue defaults to .synced when no engine")
+    @MainActor func syncStatusDefaultsSynced() {
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+
+        #expect(vm.syncStatusValue == .synced)
+    }
+
+    @Test("syncStatusValue reflects engine status")
+    @MainActor func syncStatusReflectsEngine() throws {
+        let engine = try makeSyncEngineForHomeTests()
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService(), syncEngine: engine)
+
+        engine.status.value = .offline
+        #expect(vm.syncStatusValue == .offline)
+
+        engine.status.value = .pending(3)
+        #expect(vm.syncStatusValue == .pending(3))
+
+        engine.status.value = .error("Network failure")
+        #expect(vm.syncStatusValue == .error("Network failure"))
+
+        engine.status.value = .synced
+        #expect(vm.syncStatusValue == .synced)
+    }
+
+    @Test("syncErrorMessage returns message for error status")
+    @MainActor func syncErrorMessage() throws {
+        let engine = try makeSyncEngineForHomeTests()
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService(), syncEngine: engine)
+
+        #expect(vm.syncErrorMessage == nil)
+
+        engine.status.value = .error("Connection refused")
+        #expect(vm.syncErrorMessage == "Connection refused")
+
+        engine.status.value = .synced
+        #expect(vm.syncErrorMessage == nil)
+    }
+}
+
+// MARK: - Sync Engine Helper
+
+private let homeTestBaseURL = URL(string: "https://api.test.ideapilot.app")!
+
+private func makeSyncEngineForHomeTests() throws -> SyncEngine {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try ModelContainer(
+        for: PlaybookModel.self, TaskModel.self, SectionModel.self, WeeklyCycleModel.self, MutationEntry.self,
+        configurations: config
+    )
+    let apiClient = APIClient(baseURL: homeTestBaseURL, session: URLSession.shared)
+    return SyncEngine(apiClient: apiClient, modelContainer: container)
 }
