@@ -160,9 +160,11 @@ struct PlaybookHomeView: View {
                     showCheckbox: vm.selectedLane != .later,
                     currentLane: vm.selectedLane,
                     isDragReordering: draggingTaskId != nil,
+                    syncState: vm.taskSyncState(for: task.id),
                     onTap: { vm.selectTask(task) },
                     onComplete: { vm.completeTask(id: task.id) },
-                    onMove: { lane in vm.moveTask(id: task.id, toLane: lane) }
+                    onMove: { lane in vm.moveTask(id: task.id, toLane: lane) },
+                    onRetrySync: { vm.retryTaskSync(for: task.id) }
                 )
                 .scaleEffect(isDragging ? 1.02 : 1.0)
                 .shadow(
@@ -352,9 +354,11 @@ private struct TaskCardRow: View {
     let showCheckbox: Bool
     let currentLane: TaskLane
     let isDragReordering: Bool
+    var syncState: EntitySyncState? = nil
     let onTap: () -> Void
     let onComplete: () -> Void
     let onMove: (TaskLane) -> Void
+    var onRetrySync: (() -> Void)? = nil
 
     // MARK: - Swipe State
 
@@ -437,12 +441,42 @@ private struct TaskCardRow: View {
 
                 Spacer()
 
+                if let syncState {
+                    syncIndicator(for: syncState)
+                }
+
                 TimeEstimatePill(minutes: task.estimatedMinutes)
             }
             .padding(16)
             .cardStyle()
         }
         .buttonStyle(.pressable)
+    }
+
+    // MARK: - Sync Indicator
+
+    @ViewBuilder
+    private func syncIndicator(for state: EntitySyncState) -> some View {
+        switch state {
+        case .pending, .inFlight:
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.theme.mutedForeground.opacity(0.6))
+                .accessibilityLabel("Syncing")
+                .accessibilityHint("This change is waiting to sync")
+
+        case .failed:
+            Button {
+                onRetrySync?()
+            } label: {
+                Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.theme.destructive.opacity(0.8))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Sync failed")
+            .accessibilityHint("Tap to retry syncing this change")
+        }
     }
 
     // MARK: - Checkbox

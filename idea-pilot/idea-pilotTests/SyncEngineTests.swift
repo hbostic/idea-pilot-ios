@@ -267,6 +267,186 @@ struct MutationQueueTests {
 
         #expect(queue.pendingCount == 0)
     }
+
+    // MARK: - EntityStates Dictionary
+
+    @Test("enqueue sets entityStates to .pending for entity with ID")
+    func enqueueSetsEntityStatePending() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(
+            path: "/v1/tasks/task-1",
+            method: .patch,
+            bodyData: Data("{}".utf8),
+            entityType: "task",
+            entityId: "task-1"
+        )
+
+        #expect(queue.entityStates["task-1"] == .pending)
+    }
+
+    @Test("enqueue without entityId does not add to entityStates")
+    func enqueueWithoutIdSkipsEntityStates() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(
+            path: "/v1/tasks/reorder",
+            method: .post,
+            bodyData: Data("{}".utf8),
+            entityType: "task",
+            entityId: nil
+        )
+
+        #expect(queue.entityStates.isEmpty)
+    }
+
+    @Test("markInFlight transitions entityStates to .inFlight")
+    func markInFlightUpdatesEntityStates() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(
+            path: "/v1/tasks/task-1",
+            method: .patch,
+            bodyData: nil,
+            entityType: "task",
+            entityId: "task-1"
+        )
+
+        let entry = try queue.peek()!
+        try queue.markInFlight(entry)
+
+        #expect(queue.entityStates["task-1"] == .inFlight)
+    }
+
+    @Test("remove clears entityStates when no remaining entries")
+    func removeRemovesEntityState() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(
+            path: "/v1/tasks/task-1",
+            method: .patch,
+            bodyData: nil,
+            entityType: "task",
+            entityId: "task-1"
+        )
+
+        let entry = try queue.peek()!
+        try queue.remove(entry)
+
+        #expect(queue.entityStates["task-1"] == nil)
+    }
+
+    @Test("remove preserves entityStates when other entries remain for same entity")
+    func removeKeepsStateWhenOtherEntriesRemain() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(
+            path: "/v1/tasks/task-1",
+            method: .patch,
+            bodyData: Data("{\"title\":\"A\"}".utf8),
+            entityType: "task",
+            entityId: "task-1"
+        )
+        try queue.enqueue(
+            path: "/v1/tasks/task-1",
+            method: .patch,
+            bodyData: Data("{\"lane\":\"NOW\"}".utf8),
+            entityType: "task",
+            entityId: "task-1"
+        )
+
+        let all = try queue.allPending()
+        let first = all.first!
+        try queue.remove(first)
+
+        #expect(queue.entityStates["task-1"] != nil)
+    }
+
+    @Test("markFailed sets entityStates to .failed with retryCount")
+    func markFailedSetsFailedState() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(
+            path: "/v1/tasks/task-1",
+            method: .patch,
+            bodyData: nil,
+            entityType: "task",
+            entityId: "task-1"
+        )
+
+        let entry = try queue.peek()!
+        try queue.markInFlight(entry)
+        try queue.markFailed(entry)
+
+        #expect(queue.entityStates["task-1"] == .failed(retryCount: 1))
+    }
+
+    @Test("markFailed removes entityState when entry discarded after maxRetries")
+    func markFailedRemovesStateAfterMaxRetries() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        let context = container.mainContext
+        let entry = MutationEntry(
+            endpointPath: "/v1/tasks/task-1",
+            httpMethod: .patch,
+            entityType: "task",
+            entityId: "task-1",
+            retryCount: 4,
+            maxRetries: 5
+        )
+        context.insert(entry)
+        try context.save()
+        queue.entityStates["task-1"] = .failed(retryCount: 4)
+
+        try queue.markFailed(entry)
+
+        #expect(queue.entityStates["task-1"] == nil)
+    }
+
+    @Test("purge clears all entityStates")
+    func purgeClearsEntityStates() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        try queue.enqueue(path: "/v1/tasks/t-1", method: .patch, bodyData: nil, entityType: "task", entityId: "t-1")
+        try queue.enqueue(path: "/v1/tasks/t-2", method: .patch, bodyData: nil, entityType: "task", entityId: "t-2")
+
+        #expect(queue.entityStates.count == 2)
+
+        try queue.purge()
+
+        #expect(queue.entityStates.isEmpty)
+    }
+
+    @Test("resetInFlightToPending rebuilds entityStates from persisted entries")
+    func resetInFlightRebuildsEntityStates() throws {
+        let container = try makeInMemoryModelContainer()
+        let queue = MutationQueue(modelContainer: container)
+
+        let context = container.mainContext
+        let entry = MutationEntry(
+            endpointPath: "/v1/tasks/task-1",
+            httpMethod: .patch,
+            entityType: "task",
+            entityId: "task-1",
+            status: .inFlight
+        )
+        context.insert(entry)
+        try context.save()
+
+        #expect(queue.entityStates.isEmpty)
+
+        try queue.resetInFlightToPending()
+
+        #expect(queue.entityStates["task-1"] == .pending)
+    }
 }
 
 // MARK: - SyncEngine Tests
