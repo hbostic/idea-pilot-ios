@@ -32,14 +32,24 @@ struct PlaybookListView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                if let monitor = syncEngine?.networkMonitor {
+                    OfflineBannerView(networkMonitor: monitor)
+                }
+
                 if let error = vm.error {
-                    errorBanner(error)
+                    ErrorBannerView(message: error)
                 }
 
                 if vm.isLoading && vm.playbooks.isEmpty {
-                    loadingView
+                    SkeletonList(rowCount: 3, rowHeight: 88)
                 } else if vm.isEmpty {
-                    EmptyPlaybooksView(onCreateTap: { vm.showCreateSheet = true })
+                    EmptyStateView(
+                        icon: "square.stack.3d.up.slash",
+                        title: "No playbooks yet",
+                        message: "Create your first playbook to get started",
+                        actionTitle: "New Playbook",
+                        onAction: { vm.showCreateSheet = true }
+                    )
                 } else {
                     playbookList
                 }
@@ -99,44 +109,6 @@ struct PlaybookListView: View {
         }
     }
 
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-                .frame(height: 120)
-
-            ProgressView()
-                .tint(Color.theme.mutedForeground)
-
-            Text("Loading playbooks…")
-                .font(.theme.subheadline)
-                .foregroundStyle(Color.theme.mutedForeground)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.subheadline)
-            Text(message)
-                .font(.theme.subheadline)
-        }
-        .foregroundStyle(Color.theme.destructive)
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.theme.destructive.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
-        .overlay(
-            RoundedRectangle(cornerRadius: .theme.radiusMd)
-                .stroke(Color.theme.destructive.opacity(0.3), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Error: \(message)")
-    }
 }
 
 // MARK: - Playbook Card Row
@@ -218,54 +190,6 @@ private struct PlaybookCardRow: View {
             + (nowTaskCount > 0 ? ", \(nowTaskCount) task\(nowTaskCount == 1 ? "" : "s") in Now" : "")
         )
         .accessibilityHint("Tap to open playbook")
-    }
-}
-
-// MARK: - Empty State
-
-/// Displayed when no playbooks exist.
-private struct EmptyPlaybooksView: View {
-
-    let onCreateTap: () -> Void
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-                .frame(height: 80)
-
-            Image(systemName: "square.stack.3d.up.slash")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.theme.mutedForeground)
-
-            VStack(spacing: 8) {
-                Text("No playbooks yet")
-                    .font(.theme.title2)
-                    .foregroundStyle(Color.theme.foreground)
-
-                Text("Create your first playbook to get started")
-                    .font(.theme.subheadline)
-                    .foregroundStyle(Color.theme.mutedForeground)
-                    .multilineTextAlignment(.center)
-            }
-
-            Button {
-                onCreateTap()
-            } label: {
-                Text("New Playbook")
-                    .font(.theme.body)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.theme.primaryForeground)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.theme.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
-                    .shadow(color: Color.theme.primary.opacity(0.4), radius: 12, y: 4)
-            }
-            .buttonStyle(.pressable)
-            .padding(.horizontal, 24)
-            .accessibilityLabel("Create new playbook")
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

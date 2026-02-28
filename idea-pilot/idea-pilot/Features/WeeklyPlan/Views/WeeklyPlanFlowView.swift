@@ -32,7 +32,8 @@ struct WeeklyPlanFlowView: View {
                 .padding(.top, 8)
 
                 if vm.isLoading && vm.allTasks.isEmpty {
-                    loadingView
+                    SkeletonList(rowCount: 3)
+                        .padding(.top, 16)
                 } else {
                     stepContent
                         .id(vm.currentStep)
@@ -85,23 +86,6 @@ struct WeeklyPlanFlowView: View {
         }
     }
 
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-
-            ProgressView()
-                .tint(Color.theme.mutedForeground)
-
-            Text("Loading...")
-                .font(.theme.subheadline)
-                .foregroundStyle(Color.theme.mutedForeground)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-    }
 }
 
 // MARK: - Step Indicator
