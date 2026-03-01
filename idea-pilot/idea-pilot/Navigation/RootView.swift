@@ -64,6 +64,7 @@ struct RootView: View {
                     .background(Color.theme.primary)
                     .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
                     .shadow(color: Color.theme.primary.opacity(0.5), radius: 20, y: 4)
+                    .accessibilityHidden(true)
 
                 Text("Idea Pilot")
                     .font(.theme.largeTitle)

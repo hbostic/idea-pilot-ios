@@ -303,7 +303,7 @@ private struct CreatePlaybookSheet: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(Color.theme.primaryForeground)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 50)
+                            .frame(minHeight: 50)
                             .background(isTitleEmpty ? Color.theme.muted : Color.theme.primary)
                             .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
                             .shadow(

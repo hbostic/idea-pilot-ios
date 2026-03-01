@@ -232,7 +232,7 @@ struct TaskDetailSheet: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.theme.accentForeground)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(Color.theme.accent)
                 .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
                 .shadow(color: Color.theme.accent.opacity(0.4), radius: 12, y: 4)
@@ -251,7 +251,7 @@ struct TaskDetailSheet: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.theme.destructive)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
                 .overlay(

@@ -735,7 +735,7 @@ private struct PrimaryActionButton: View {
             }
             .foregroundStyle(Color.theme.primaryForeground)
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(minHeight: 50)
             .background(isEnabled ? Color.theme.primary : Color.theme.muted)
             .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
             .shadow(

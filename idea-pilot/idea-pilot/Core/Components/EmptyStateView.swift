@@ -50,12 +50,13 @@ struct EmptyStateView: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.theme.primaryForeground)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 50)
+                        .frame(minHeight: 50)
                         .background(Color.theme.primary)
                         .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
                         .shadow(color: Color.theme.primary.opacity(0.4), radius: 12, y: 4)
                 }
                 .buttonStyle(.pressable)
+                .accessibilityLabel(actionTitle)
                 .padding(.horizontal, 24)
             }
         }
