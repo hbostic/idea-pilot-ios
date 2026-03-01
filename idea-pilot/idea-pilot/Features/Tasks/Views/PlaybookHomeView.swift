@@ -136,7 +136,11 @@ struct PlaybookHomeView: View {
         if vm.isLoading && vm.allTasks.isEmpty {
             SkeletonList(rowCount: 3)
         } else if vm.isEmpty {
-            EmptyLaneView(lane: vm.selectedLane, message: vm.emptyStateMessage)
+            if vm.selectedLane == .now && vm.showCelebration {
+                CelebrationView()
+            } else {
+                EmptyLaneView(lane: vm.selectedLane, message: vm.emptyStateMessage)
+            }
         } else {
             taskList
         }
@@ -360,6 +364,12 @@ private struct TaskCardRow: View {
     let onMove: (TaskLane) -> Void
     var onRetrySync: (() -> Void)? = nil
 
+    // MARK: - Completion Animation State
+
+    @State private var isCompleting = false
+    @State private var isSliding = false
+    @State private var completionTask: Task<Void, Never>?
+
     // MARK: - Swipe State
 
     @State private var dragOffset: CGFloat = 0
@@ -388,10 +398,12 @@ private struct TaskCardRow: View {
             swipeBackgroundLayer
 
             cardContent
-                .offset(x: dragOffset)
+                .offset(x: isSliding ? -500 : dragOffset)
+                .opacity(isSliding ? 0 : 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
         .simultaneousGesture(dragGesture)
+        .onDisappear { completionTask?.cancel() }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(task.title), \(task.estimatedMinutes) minutes"
@@ -428,13 +440,17 @@ private struct TaskCardRow: View {
                     Text(task.title)
                         .font(.theme.body)
                         .foregroundStyle(Color.theme.foreground)
+                        .strikethrough(isCompleting, color: Color.theme.mutedForeground)
+                        .opacity(isCompleting ? 0.5 : 1.0)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                        .motionSafe(.easeInOut(duration: 0.2))
 
                     if let detail = task.detail, !detail.isEmpty {
                         Text(detail)
                             .font(.theme.caption)
                             .foregroundStyle(Color.theme.mutedForeground)
+                            .opacity(isCompleting ? 0.3 : 1.0)
                             .lineLimit(1)
                     }
                 }
@@ -483,16 +499,67 @@ private struct TaskCardRow: View {
 
     private var checkboxButton: some View {
         Button {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
-            onComplete()
+            guard !isCompleting else { return }
+            beginCompletionAnimation()
         } label: {
-            Circle()
-                .stroke(Color.theme.mutedForeground, lineWidth: 1.5)
-                .frame(width: 24, height: 24)
+            ZStack {
+                Circle()
+                    .stroke(
+                        isCompleting ? Color.theme.accent : Color.theme.mutedForeground,
+                        lineWidth: 1.5
+                    )
+                    .frame(width: 24, height: 24)
+
+                if isCompleting {
+                    Circle()
+                        .fill(Color.theme.accent)
+                        .frame(width: 24, height: 24)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.theme.background)
+                }
+            }
+            .motionSafe(.easeInOut(duration: 0.15))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Complete task")
+        .accessibilityLabel(isCompleting ? "Completed" : "Complete task")
+    }
+
+    // MARK: - Completion Animation
+
+    /// Starts the phased completion animation: checkbox fill + strikethrough → pause → slide out.
+    ///
+    /// With Reduce Motion enabled, skips all animation and completes immediately.
+    private func beginCompletionAnimation() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+
+        if UIAccessibility.isReduceMotionEnabled {
+            onComplete()
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.15)) {
+            isCompleting = true
+        }
+
+        completionTask = Task { @MainActor in
+            // Phase 1: 1000ms pause — user sees the completed state.
+            try? await Task.sleep(for: .seconds(1.0))
+            guard !Task.isCancelled else { return }
+
+            // Phase 2: 500ms slide left + fade out.
+            withAnimation(.easeIn(duration: 0.5)) {
+                isSliding = true
+            }
+
+            try? await Task.sleep(for: .seconds(0.5))
+            guard !Task.isCancelled else { return }
+
+            // Phase 3: Fire the completion callback.
+            onComplete()
+        }
     }
 
     // MARK: - Swipe Background

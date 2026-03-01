@@ -409,6 +409,70 @@ struct PlaybookHomeViewModelTests {
 
         #expect(vm.taskSyncState(for: "t-1") == .failed(retryCount: 2))
     }
+
+    // MARK: - Celebration
+
+    @Test("completeTask sets showCelebration when last Now task is completed")
+    @MainActor func completeLastNowTaskShowsCelebration() async throws {
+        let mockService = MockTaskService()
+        let completedTask = TaskModel(id: "t-only", playbookId: "pb-1", title: "Only Task", lane: .now, status: .done, completedAt: .now)
+        mockService.completeResult = .success(completedTask)
+
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+        vm.allTasks = [
+            TaskModel(id: "t-only", playbookId: "pb-1", title: "Only Task", lane: .now, orderIndex: 0)
+        ]
+        vm.selectLane(.now)
+
+        vm.completeTask(id: "t-only")
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.showCelebration == true)
+    }
+
+    @Test("completeTask does not set showCelebration when other Now tasks remain")
+    @MainActor func completeNonLastNowTaskNoCelebration() async throws {
+        let mockService = MockTaskService()
+        let completedTask = TaskModel(id: "t-1", playbookId: "pb-1", title: "Now Task 1", lane: .now, status: .done, completedAt: .now)
+        mockService.completeResult = .success(completedTask)
+
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+        vm.allTasks = makeSampleTasks() // Has 2 Now tasks
+        vm.selectLane(.now)
+
+        vm.completeTask(id: "t-1")
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.showCelebration == false)
+    }
+
+    @Test("completeTask does not set showCelebration when completing from non-Now lane")
+    @MainActor func completeNextTaskNoCelebration() async throws {
+        let mockService = MockTaskService()
+        let completedTask = TaskModel(id: "t-3", playbookId: "pb-1", title: "Next Task", lane: .next, status: .done, completedAt: .now)
+        mockService.completeResult = .success(completedTask)
+
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+        vm.allTasks = [
+            TaskModel(id: "t-3", playbookId: "pb-1", title: "Next Task", lane: .next, orderIndex: 0)
+        ]
+        vm.selectLane(.next)
+
+        vm.completeTask(id: "t-3")
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.showCelebration == false)
+    }
+
+    @Test("selectLane resets showCelebration")
+    @MainActor func selectLaneResetsCelebration() {
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: MockTaskService(), sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+        vm.showCelebration = true
+
+        vm.selectLane(.next)
+
+        #expect(vm.showCelebration == false)
+    }
 }
 
 // MARK: - Sync Engine Helper

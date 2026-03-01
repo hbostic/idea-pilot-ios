@@ -34,6 +34,11 @@ final class PlaybookHomeViewModel {
 
     var selectedTask: TaskModel?
 
+    // MARK: - Celebration
+
+    /// True when the last Now-lane task was just completed, triggering the celebration view.
+    var showCelebration = false
+
     // MARK: - Computed
 
     /// Tasks in the current lane that are still open, sorted by display order.
@@ -128,6 +133,7 @@ final class PlaybookHomeViewModel {
     func loadTasks() {
         error = nil
         isLoading = true
+        showCelebration = false
 
         Task {
             defer { isLoading = false }
@@ -149,6 +155,7 @@ final class PlaybookHomeViewModel {
     /// Refreshes tasks for pull-to-refresh. Async so SwiftUI `.refreshable` can await it.
     func refresh() async {
         error = nil
+        showCelebration = false
 
         do {
             allTasks = try await taskService.fetchTasks(
@@ -166,16 +173,24 @@ final class PlaybookHomeViewModel {
     /// Switches the selected lane. Instant — no network call, just re-filters cached tasks.
     func selectLane(_ lane: TaskLane) {
         selectedLane = lane
+        showCelebration = false
     }
 
     /// Marks a task as done. Updates the local list on success.
+    /// Shows a celebration when the last Now-lane task is completed.
     func completeTask(id: String) {
+        let wasLastNowTask = selectedLane == .now
+            && allTasks.count(where: { $0.lane == .now && $0.status == .open }) == 1
+
         Task {
             do {
                 let updated = try await taskService.completeTask(id: id)
                 if let index = allTasks.firstIndex(where: { $0.id == id }) {
                     allTasks[index].status = updated.status
                     allTasks[index].completedAt = updated.completedAt
+                }
+                if wasLastNowTask {
+                    showCelebration = true
                 }
             } catch let error as TaskError {
                 mapError(error)
