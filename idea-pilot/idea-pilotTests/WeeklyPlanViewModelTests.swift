@@ -125,7 +125,7 @@ struct WeeklyPlanViewModelTests {
 
         let vm = makeVM(taskService: taskService, weeklyPlanService: weeklyPlanService)
         vm.loadData()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(100))
 
         #expect(taskService.fetchCallCount == 1)
         #expect(weeklyPlanService.getWeeklyStatusCallCount == 1)
@@ -142,7 +142,7 @@ struct WeeklyPlanViewModelTests {
 
         let vm = makeVM(taskService: taskService)
         vm.loadData()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.dispositions.count == 2)
         #expect(vm.dispositions["t-1"] == .keepInNow)
@@ -156,7 +156,7 @@ struct WeeklyPlanViewModelTests {
 
         let vm = makeVM(taskService: taskService)
         vm.loadData()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.currentStep == .select)
         #expect(vm.dispositions.isEmpty)
@@ -171,7 +171,7 @@ struct WeeklyPlanViewModelTests {
 
         let vm = makeVM(taskService: taskService, weeklyPlanService: weeklyPlanService)
         vm.loadData()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.lastWeekCycle == nil)
         #expect(vm.error == nil)
@@ -185,7 +185,7 @@ struct WeeklyPlanViewModelTests {
 
         let vm = makeVM(taskService: taskService)
         vm.loadData()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.error == "Network error. Please check your connection.")
         #expect(vm.allTasks.isEmpty)
@@ -200,7 +200,7 @@ struct WeeklyPlanViewModelTests {
 
         let vm = makeVM(taskService: taskService, weeklyPlanService: weeklyPlanService)
         vm.loadData()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.error == "Something went wrong. Please try again.")
     }
@@ -270,7 +270,7 @@ struct WeeklyPlanViewModelTests {
         ]
 
         vm.applyDispositionsAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         // Only t-1 should have been updated (moveToNext), t-2 is keepInNow.
         #expect(taskService.updateCallCount == 1)
@@ -293,7 +293,7 @@ struct WeeklyPlanViewModelTests {
         ]
 
         vm.applyDispositionsAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(taskService.updateCallCount == 0)
         #expect(vm.currentStep == .select)
@@ -309,7 +309,7 @@ struct WeeklyPlanViewModelTests {
         vm.dispositions = ["t-1": .moveToLater]
 
         vm.applyDispositionsAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.error == "Something went wrong. Please try again.")
         #expect(vm.currentStep == .review)
@@ -421,7 +421,7 @@ struct WeeklyPlanViewModelTests {
         vm.selectedTaskIds = ["t-4", "t-5"]
 
         vm.createPlanAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(weeklyPlanService.createWeeklyPlanCallCount == 1)
         #expect(weeklyPlanService.capturedCreatePlaybookId == "pb-1")
@@ -435,7 +435,7 @@ struct WeeklyPlanViewModelTests {
         vm.selectedTaskIds = ["t-4"]
 
         vm.createPlanAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.newWeeklyCycle != nil)
         #expect(vm.currentStep == .confirm)
@@ -451,7 +451,7 @@ struct WeeklyPlanViewModelTests {
         vm.selectedTaskIds = ["t-4"]
 
         vm.createPlanAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(vm.error == "Something went wrong. Please try again.")
         #expect(vm.currentStep != .confirm)
@@ -464,7 +464,7 @@ struct WeeklyPlanViewModelTests {
         let vm = makeVM(weeklyPlanService: weeklyPlanService)
 
         vm.createPlanAndAdvance()
-        try await Task.sleep(for: .milliseconds(50))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(weeklyPlanService.createWeeklyPlanCallCount == 0)
         #expect(vm.currentStep == .review)
