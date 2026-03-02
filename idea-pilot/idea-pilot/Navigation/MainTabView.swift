@@ -130,6 +130,7 @@ private struct CustomTabBar: View {
 
     @Binding var selectedTab: AppTab
     var onCaptureTap: () -> Void
+    @State private var tappedTab: AppTab?
 
     var body: some View {
         HStack {
@@ -153,6 +154,7 @@ private struct CustomTabBar: View {
 
     private func tabButton(_ tab: AppTab) -> some View {
         Button {
+            tappedTab = tab
             selectedTab = tab
         } label: {
             VStack(spacing: 4) {
@@ -165,10 +167,21 @@ private struct CustomTabBar: View {
                 }
             }
             .foregroundStyle(selectedTab == tab ? Color.theme.primary : Color.theme.mutedForeground)
+            .scaleEffect(tappedTab == tab ? 0.85 : 1.0)
             .frame(minWidth: 56, minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onChange(of: tappedTab) { _, newValue in
+            if newValue == tab {
+                let animation: Animation? = UIAccessibility.isReduceMotionEnabled
+                    ? nil
+                    : .spring(response: 0.3, dampingFraction: 0.5)
+                withAnimation(animation) {
+                    tappedTab = nil
+                }
+            }
+        }
         .accessibilityLabel("\(tab.label) tab")
         .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
     }

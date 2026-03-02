@@ -341,7 +341,7 @@ private struct LaneSegmentedControl: View {
         .padding(4)
         .background(Color.theme.secondary)
         .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
-        .motionSafe(.spring(response: 0.3, dampingFraction: 0.8))
+        .motionSafe(.spring(duration: 0.6, bounce: 0.2))
     }
 }
 

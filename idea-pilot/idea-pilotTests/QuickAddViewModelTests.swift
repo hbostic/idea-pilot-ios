@@ -212,8 +212,8 @@ struct QuickAddViewModelTests {
         try await Task.sleep(for: .milliseconds(50))
         #expect(vm.showSuccessFlash == true)
 
-        // Wait for flash to auto-dismiss.
-        try await Task.sleep(for: .milliseconds(1000))
+        // Wait for flash to auto-dismiss (300ms flash + margin).
+        try await Task.sleep(for: .milliseconds(500))
         #expect(vm.showSuccessFlash == false)
     }
 
