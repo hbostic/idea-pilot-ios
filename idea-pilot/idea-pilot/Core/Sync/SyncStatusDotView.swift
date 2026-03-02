@@ -23,6 +23,12 @@ struct SyncStatusDotView: View {
     var size: CGFloat = 8
 
     var body: some View {
+        dotView
+            .accessibilityLabel(statusLabel)
+    }
+
+    @ViewBuilder
+    private var dotView: some View {
         switch status {
         case .synced:
             Circle()

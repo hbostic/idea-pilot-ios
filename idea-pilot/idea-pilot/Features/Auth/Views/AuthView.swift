@@ -155,7 +155,7 @@ struct AuthView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(minHeight: 50)
             .foregroundStyle(Color.theme.primaryForeground)
             .background(Color.theme.primary)
             .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))

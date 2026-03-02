@@ -169,6 +169,8 @@ private struct CustomTabBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(tab.label) tab")
+        .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
     }
 
     // MARK: - Capture Button (Center)
@@ -186,6 +188,7 @@ private struct CustomTabBar: View {
                 .shadow(color: Color.theme.primary.opacity(0.4), radius: 8, y: 2)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Create new task")
         .offset(y: -8)
     }
 }
@@ -218,6 +221,7 @@ private struct NowPlaceholderView: View {
                         .font(.theme.body)
                         .foregroundStyle(Color.theme.destructive)
                 }
+                .accessibilityLabel("Sign out")
             }
         }
         .safeAreaPadding(.bottom, 72)

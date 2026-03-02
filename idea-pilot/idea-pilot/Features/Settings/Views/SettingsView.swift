@@ -235,7 +235,7 @@ struct SettingsView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.theme.destructive)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(Color.theme.destructive.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
                 .overlay(

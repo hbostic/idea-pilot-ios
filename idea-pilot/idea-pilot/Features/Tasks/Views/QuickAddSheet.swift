@@ -202,7 +202,7 @@ struct QuickAddSheet: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.theme.primaryForeground)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(vm.canSubmit ? Color.theme.primary : Color.theme.muted)
                 .clipShape(RoundedRectangle(cornerRadius: .theme.radiusMd))
                 .shadow(

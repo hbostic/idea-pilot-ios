@@ -707,7 +707,7 @@ private struct AddTaskButton: View {
             }
             .foregroundStyle(Color.theme.mutedForeground)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
+            .frame(minHeight: 56)
             .background(Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: .theme.radiusLg))
             .overlay(
