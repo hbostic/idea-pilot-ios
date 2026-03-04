@@ -184,6 +184,7 @@ private struct CustomTabBar: View {
         }
         .accessibilityLabel("\(tab.label) tab")
         .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+        .accessibilityIdentifier("tab_\(tab.label.lowercased())")
     }
 
     // MARK: - Capture Button (Center)
@@ -202,6 +203,7 @@ private struct CustomTabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Create new task")
+        .accessibilityIdentifier("tab_capture")
         .offset(y: -8)
     }
 }

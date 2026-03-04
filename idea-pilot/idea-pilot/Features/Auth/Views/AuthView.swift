@@ -104,6 +104,7 @@ struct AuthView: View {
             ) {
                 focusedField = .password
             }
+            .accessibilityIdentifier("auth_email_field")
 
             themedSecureField(
                 label: "PASSWORD",
@@ -120,6 +121,7 @@ struct AuthView: View {
                     focusedField = .confirmPassword
                 }
             }
+            .accessibilityIdentifier("auth_password_field")
 
             if !vm.isLoginMode {
                 themedSecureField(
@@ -133,6 +135,7 @@ struct AuthView: View {
                     focusedField = nil
                     vm.submit()
                 }
+                .accessibilityIdentifier("auth_confirm_password_field")
             }
         }
     }
@@ -165,6 +168,7 @@ struct AuthView: View {
         .accessibilityLabel(vm.isLoading
             ? (vm.isLoginMode ? "Signing in" : "Signing up")
             : (vm.isLoginMode ? "Sign In" : "Sign Up"))
+        .accessibilityIdentifier("auth_submit_button")
     }
 
     // MARK: - Mode Toggle
@@ -192,6 +196,7 @@ struct AuthView: View {
             .font(.theme.subheadline)
         }
         .accessibilityLabel(vm.isLoginMode ? "Switch to Sign Up" : "Switch to Sign In")
+        .accessibilityIdentifier("auth_mode_toggle")
     }
 
     // MARK: - Themed Text Field
