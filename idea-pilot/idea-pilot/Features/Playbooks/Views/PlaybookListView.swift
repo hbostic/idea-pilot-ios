@@ -109,6 +109,7 @@ struct PlaybookListView: View {
                 .accessibilityIdentifier("new_playbook_button")
                 .padding(.top, 4)
         }
+        .drawingGroup()
     }
 
 }

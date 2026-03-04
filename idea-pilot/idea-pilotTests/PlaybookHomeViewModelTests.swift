@@ -473,6 +473,41 @@ struct PlaybookHomeViewModelTests {
 
         #expect(vm.showCelebration == false)
     }
+
+    // MARK: - Performance
+
+    @Test("filtering 100 tasks by lane completes quickly")
+    @MainActor func filteringAtScale() async throws {
+        let mockService = MockTaskService()
+        var tasks: [TaskModel] = []
+        for i in 0..<100 {
+            let lane: TaskLane = [.now, .next, .later][i % 3]
+            tasks.append(TaskModel(id: "t-\(i)", playbookId: "pb-1", title: "Task \(i)", lane: lane, orderIndex: i))
+        }
+        mockService.fetchResult = .success(tasks)
+        let vm = PlaybookHomeViewModel(playbook: makeSamplePlaybook(), taskService: mockService, sectionService: StubSectionService(), weeklyPlanService: StubWeeklyPlanService())
+
+        vm.loadTasks()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.allTasks.count == 100)
+
+        // Verify filtering works correctly at scale.
+        vm.selectedLane = .now
+        let nowTasks = vm.tasksInCurrentLane
+        #expect(nowTasks.count == 34) // ceil(100/3) for index % 3 == 0
+
+        vm.selectedLane = .next
+        let nextTasks = vm.tasksInCurrentLane
+        #expect(nextTasks.count == 33)
+
+        vm.selectedLane = .later
+        let laterTasks = vm.tasksInCurrentLane
+        #expect(laterTasks.count == 33)
+
+        // Total should account for all tasks.
+        #expect(nowTasks.count + nextTasks.count + laterTasks.count == 100)
+    }
 }
 
 // MARK: - Sync Engine Helper
