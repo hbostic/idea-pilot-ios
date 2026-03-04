@@ -160,7 +160,10 @@ final class WeeklyPlanService: WeeklyPlanServiceProtocol, Sendable {
     /// Upserts a single weekly cycle DTO into SwiftData.
     @MainActor
     private func upsertSingleCycle(_ dto: WeeklyCycleDTO) throws -> WeeklyCycleModel {
-        try upsertCycles([dto]).first!
+        guard let model = try upsertCycles([dto]).first else {
+            throw WeeklyPlanError.serverError("Failed to upsert weekly cycle")
+        }
+        return model
     }
 
     /// Inserts an optimistic weekly cycle with a temp ID for offline creates.

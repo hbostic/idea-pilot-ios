@@ -140,7 +140,10 @@ final class SectionService: SectionServiceProtocol, Sendable {
     /// Upserts a single section DTO into SwiftData.
     @MainActor
     private func upsertSingleSection(_ dto: SectionDTO) throws -> SectionModel {
-        try upsertSections([dto]).first!
+        guard let model = try upsertSections([dto]).first else {
+            throw SectionError.serverError("Failed to upsert section")
+        }
+        return model
     }
 
     /// Applies a section content update locally (for offline queueing).

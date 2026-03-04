@@ -59,7 +59,9 @@ struct idea_pilotApp: App {
         }
         #endif
 
-        let container = try! ModelContainer(for: PlaybookModel.self, MutationEntry.self)
+        guard let container = try? ModelContainer(for: PlaybookModel.self, MutationEntry.self) else {
+            fatalError("Failed to initialize SwiftData ModelContainer. The app cannot function without local storage.")
+        }
         let tm = TokenManager(
             keychain: KeychainService(),
             baseURL: AppConfiguration.apiBaseURL
