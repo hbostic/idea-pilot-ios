@@ -198,6 +198,7 @@ private struct ReviewStepView: View {
                 ) {
                     vm.applyDispositionsAndAdvance()
                 }
+                .accessibilityIdentifier("weekly_continue")
             }
             .padding(.horizontal, 24)
             .padding(.top, 16)
@@ -396,6 +397,7 @@ private struct SelectStepView: View {
                 ) {
                     vm.createPlanAndAdvance()
                 }
+                .accessibilityIdentifier("weekly_plan_week")
             }
             .padding(.horizontal, 24)
             .padding(.top, 16)
@@ -513,6 +515,7 @@ private struct SelectStepView: View {
                 .accessibilityLabel("\(task.title), \(task.estimatedMinutes) minutes")
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
                 .accessibilityHint(isSelected ? "Tap to deselect" : "Tap to select")
+                .accessibilityIdentifier("weekly_task_\(task.id)")
             }
         }
     }
@@ -617,6 +620,7 @@ private struct ConfirmStepView: View {
                 ) {
                     onDismiss()
                 }
+                .accessibilityIdentifier("weekly_lets_go")
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)

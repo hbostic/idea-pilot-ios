@@ -86,6 +86,7 @@ struct PlaybookHomeView: View {
                         .foregroundStyle(Color.theme.mutedForeground)
                 }
                 .accessibilityLabel("More options")
+                .accessibilityIdentifier("playbook_menu")
             }
         }
         .alert("Sync Error", isPresented: $showSyncError) {
@@ -336,6 +337,7 @@ private struct LaneSegmentedControl: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(lane.rawValue) lane, \(counts[lane] ?? 0) tasks")
                 .accessibilityAddTraits(selectedLane == lane ? .isSelected : [])
+                .accessibilityIdentifier("lane_\(lane.rawValue.lowercased())")
             }
         }
         .padding(4)
@@ -410,6 +412,7 @@ private struct TaskCardRow: View {
             + (showCheckbox ? ", double tap to complete" : "")
         )
         .accessibilityHint("Tap for details")
+        .accessibilityIdentifier("task_card_\(task.id)")
         .accessibilityAction(named: "Complete task") { onComplete() }
         .accessibilityAction(named: "Move to \(moveDestinations.first?.rawValue ?? "")") {
             if let dest = moveDestinations.first { onMove(dest) }
@@ -524,6 +527,7 @@ private struct TaskCardRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isCompleting ? "Completed" : "Complete task")
+        .accessibilityIdentifier("task_checkbox_\(task.id)")
     }
 
     // MARK: - Completion Animation

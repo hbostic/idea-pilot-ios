@@ -102,9 +102,11 @@ struct PlaybookListView: View {
                     syncEngine: syncEngine,
                     onArchive: { vm.archivePlaybook(id: playbook.id) }
                 )
+                .accessibilityIdentifier("playbook_row_\(playbook.id)")
             }
 
             NewPlaybookButton(onTap: { vm.showCreateSheet = true })
+                .accessibilityIdentifier("new_playbook_button")
                 .padding(.top, 4)
         }
     }
@@ -265,6 +267,7 @@ private struct CreatePlaybookSheet: View {
                                     .stroke(Color.theme.input, lineWidth: 1)
                             )
                             .accessibilityLabel("Playbook title")
+                            .accessibilityIdentifier("create_playbook_title")
                     }
 
                     // Description field
@@ -315,6 +318,7 @@ private struct CreatePlaybookSheet: View {
                     .disabled(isTitleEmpty)
                     .accessibilityLabel("Create playbook")
                     .accessibilityHint(isTitleEmpty ? "Enter a title first" : "Creates a new playbook")
+                    .accessibilityIdentifier("create_playbook_submit")
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 16)

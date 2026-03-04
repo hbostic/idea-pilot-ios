@@ -128,6 +128,7 @@ struct QuickAddSheet: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Playbook: \(vm.selectedPlaybook?.title ?? "none selected")")
+        .accessibilityIdentifier("quickadd_playbook_picker")
     }
 
     // MARK: - Title Field
@@ -155,6 +156,7 @@ struct QuickAddSheet: View {
                 )
                 .submitLabel(.done)
                 .accessibilityLabel("Task title")
+                .accessibilityIdentifier("quickadd_title")
         }
     }
 
@@ -214,6 +216,7 @@ struct QuickAddSheet: View {
         .disabled(!vm.canSubmit)
         .accessibilityLabel(vm.addButtonTitle)
         .accessibilityHint(vm.canSubmit ? "Creates a new task" : "Enter a title first")
+        .accessibilityIdentifier("quickadd_submit")
     }
 
     // MARK: - Success Flash
