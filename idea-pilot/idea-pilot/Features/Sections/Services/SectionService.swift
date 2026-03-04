@@ -170,7 +170,8 @@ final class SectionService: SectionServiceProtocol, Sendable {
     private func cachedSections(playbookId: String) throws -> [SectionModel] {
         let context = modelContainer.mainContext
         let predicate = #Predicate<SectionModel> { $0.playbookId == playbookId }
-        let descriptor = FetchDescriptor(predicate: predicate)
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.sortBy = [SortDescriptor(\SectionModel.sectionTypeRawValue)]
         return try context.fetch(descriptor)
     }
 

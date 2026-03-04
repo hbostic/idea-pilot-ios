@@ -188,6 +188,7 @@ struct PlaybookHomeView: View {
             AddTaskButton(lane: vm.selectedLane)
                 .padding(.top, 4)
         }
+        .drawingGroup()
     }
 
     // MARK: - Reorder Gesture
