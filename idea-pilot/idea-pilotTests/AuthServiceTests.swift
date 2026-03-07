@@ -263,10 +263,31 @@ struct AuthServiceTests {
 
     // MARK: - Error Mapping
 
-    @Test("login network error mapped to AuthError.networkError")
-    func loginNetworkError() async throws {
+    @Test("login offline error mapped to AuthError.offline")
+    func loginOfflineError() async throws {
         AuthServiceMockURLProtocol.handler = { _ in
             throw URLError(.notConnectedToInternet)
+        }
+
+        let (authService, _, _, _) = try makeAuthService()
+
+        do {
+            _ = try await authService.login(email: "test@example.com", password: "pass")
+            Issue.record("Expected AuthError.offline")
+        } catch let error as AuthError {
+            guard case .offline = error else {
+                Issue.record("Expected offline, got \(error)")
+                return
+            }
+        }
+
+        AuthServiceMockURLProtocol.handler = nil
+    }
+
+    @Test("login network error (non-offline) mapped to AuthError.networkError")
+    func loginNetworkError() async throws {
+        AuthServiceMockURLProtocol.handler = { _ in
+            throw URLError(.cannotConnectToHost)
         }
 
         let (authService, _, _, _) = try makeAuthService()

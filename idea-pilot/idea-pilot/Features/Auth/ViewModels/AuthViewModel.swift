@@ -160,10 +160,12 @@ final class AuthViewModel {
             generalError = "Invalid email or password"
         case .emailAlreadyExists:
             emailError = "An account with this email already exists"
+        case .offline:
+            generalError = "No internet connection. Please check your connection and try again."
         case .networkError:
-            generalError = "Network error. Please check your connection."
+            generalError = "Unable to reach the server. Please try again later."
         case .serverError(let detail):
-            generalError = "Something went wrong. Please try again."
+            generalError = "The server encountered an error. Please try again later."
             #if DEBUG
             print("[AuthViewModel] Server error detail: \(detail)")
             #endif
