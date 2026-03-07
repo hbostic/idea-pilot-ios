@@ -66,6 +66,7 @@ struct MainTabView: View {
 
     @State private var selectedTab: AppTab = .now
     @State private var playbookListVM: PlaybookListViewModel
+    @State private var nowTabVM: NowTabViewModel
     @State private var showQuickAddSheet = false
 
     init(playbookService: any PlaybookServiceProtocol, taskService: any TaskServiceProtocol, sectionService: any SectionServiceProtocol, weeklyPlanService: any WeeklyPlanServiceProtocol, tokenManager: TokenManager, authService: any AuthServiceProtocol, syncEngine: SyncEngine?, onSignOut: @escaping () -> Void) {
@@ -78,6 +79,7 @@ struct MainTabView: View {
         self.authService = authService
         self.syncEngine = syncEngine
         self._playbookListVM = State(initialValue: PlaybookListViewModel(playbookService: playbookService))
+        self._nowTabVM = State(initialValue: NowTabViewModel(playbookService: playbookService))
     }
 
     var body: some View {
@@ -108,7 +110,14 @@ struct MainTabView: View {
     private var tabContent: some View {
         ZStack {
             NavigationStack {
-                NowPlaceholderView(onSignOut: onSignOut)
+                NowTabView(
+                    vm: nowTabVM,
+                    taskService: taskService,
+                    sectionService: sectionService,
+                    weeklyPlanService: weeklyPlanService,
+                    syncEngine: syncEngine,
+                    onSignOut: onSignOut
+                )
             }
             .opacity(selectedTab == .now ? 1 : 0)
 
@@ -205,41 +214,6 @@ private struct CustomTabBar: View {
         .accessibilityLabel("Create new task")
         .accessibilityIdentifier("tab_capture")
         .offset(y: -8)
-    }
-}
-
-// MARK: - Placeholder Tab Views
-
-/// Placeholder for the Now tab content.
-private struct NowPlaceholderView: View {
-
-    var onSignOut: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color.theme.background
-                .ignoresSafeArea()
-
-            VStack(spacing: 24) {
-                Text("Now")
-                    .font(.theme.largeTitle)
-                    .foregroundStyle(Color.theme.foreground)
-
-                Text("Coming soon")
-                    .font(.theme.subheadline)
-                    .foregroundStyle(Color.theme.mutedForeground)
-
-                Button {
-                    onSignOut()
-                } label: {
-                    Text("Sign Out")
-                        .font(.theme.body)
-                        .foregroundStyle(Color.theme.destructive)
-                }
-                .accessibilityLabel("Sign out")
-            }
-        }
-        .safeAreaPadding(.bottom, 72)
     }
 }
 
