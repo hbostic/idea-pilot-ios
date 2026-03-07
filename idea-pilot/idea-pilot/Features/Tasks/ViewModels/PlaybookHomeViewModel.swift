@@ -130,7 +130,11 @@ final class PlaybookHomeViewModel {
     // MARK: - Actions
 
     /// Loads all tasks for this playbook on appear. Fires an async Task internally.
+    ///
+    /// Also persists this playbook as the last-viewed so the Now tab can restore it.
     func loadTasks() {
+        NowTabViewModel.saveLastViewedPlaybookId(playbook.id)
+
         error = nil
         isLoading = true
         showCelebration = false
