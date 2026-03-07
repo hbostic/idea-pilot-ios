@@ -233,12 +233,12 @@ struct AuthViewModelTests {
         #expect(vm.isAuthenticated == false)
     }
 
-    // MARK: - Error Mapping: Network Error
+    // MARK: - Error Mapping: Offline
 
-    @Test("login network error sets generalError")
-    @MainActor func loginNetworkError() async throws {
+    @Test("login offline error shows connection message")
+    @MainActor func loginOfflineError() async throws {
         let mockService = MockAuthService()
-        mockService.loginResult = .failure(.networkError("timeout"))
+        mockService.loginResult = .failure(.offline)
         let vm = AuthViewModel(authService: mockService)
         vm.email = "test@example.com"
         vm.password = "password123"
@@ -246,7 +246,41 @@ struct AuthViewModelTests {
         vm.submit()
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(vm.generalError == "Network error. Please check your connection.")
+        #expect(vm.generalError == "No internet connection. Please check your connection and try again.")
+        #expect(vm.isAuthenticated == false)
+    }
+
+    // MARK: - Error Mapping: Network Error (Server Unreachable)
+
+    @Test("login network error shows server unreachable message")
+    @MainActor func loginNetworkError() async throws {
+        let mockService = MockAuthService()
+        mockService.loginResult = .failure(.networkError("connection refused"))
+        let vm = AuthViewModel(authService: mockService)
+        vm.email = "test@example.com"
+        vm.password = "password123"
+
+        vm.submit()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.generalError == "Unable to reach the server. Please try again later.")
+        #expect(vm.isAuthenticated == false)
+    }
+
+    // MARK: - Error Mapping: Server Error
+
+    @Test("login server error shows server error message")
+    @MainActor func loginServerError() async throws {
+        let mockService = MockAuthService()
+        mockService.loginResult = .failure(.serverError("Internal server error"))
+        let vm = AuthViewModel(authService: mockService)
+        vm.email = "test@example.com"
+        vm.password = "password123"
+
+        vm.submit()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(vm.generalError == "The server encountered an error. Please try again later.")
         #expect(vm.isAuthenticated == false)
     }
 

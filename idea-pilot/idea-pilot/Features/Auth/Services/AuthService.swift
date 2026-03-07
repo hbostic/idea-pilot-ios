@@ -16,7 +16,9 @@ nonisolated enum AuthError: Error, Equatable, Sendable {
     case invalidCredentials
     /// The email is already registered (400 with "already exists").
     case emailAlreadyExists
-    /// A network-level failure occurred.
+    /// The device has no internet connection.
+    case offline
+    /// A network-level failure occurred (server unreachable, timeout, DNS, etc.).
     case networkError(String)
     /// The server returned an unexpected error.
     case serverError(String)
@@ -138,7 +140,7 @@ final class AuthService: AuthServiceProtocol, Sendable {
         case .networkError(let urlError):
             return .networkError(urlError.localizedDescription)
         case .offline:
-            return .networkError("No internet connection")
+            return .offline
         case .notFound:
             return .serverError("Endpoint not found")
         case .serverError(_, let message):
